@@ -1,0 +1,9 @@
+-- Copy to monitors_local.lua and edit. Ignored by git.
+-- Find your outputs with:  hyprctl monitors
+--
+-- hl.monitor({
+--     output   = "HDMI-A-1",
+--     mode     = "2560x1440@144",  -- some panels negotiate low without this
+--     position = "0x0",
+--     scale    = 1,
+-- })

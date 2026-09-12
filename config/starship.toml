@@ -1,0 +1,100 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt, in the desktop's design language.
+#
+# Every readout on this desktop is the same shape: a bracket implying the
+# frame, a dim EN/JP label, and the value. The prompt is one more of those --
+# ┌ and └ are Bracket.qml's corner marks, the JP micro-labels are Cluster.qml's,
+# and the palette under `[palettes.wall]` is the same qml_color.json the HUD
+# reads, rewritten by hypr/bin/tokyo-palette on every wallpaper change.
+#
+# The rule that decides every colour here: colour only ever means "wrong".
+# The accent carries structure (the rail, the cursor mark), text and dim carry
+# values, and alert/warn appear only when something actually needs attention --
+# a failed command, a conflict, a diverged branch. A prompt with no red on it
+# means nothing is wrong, and that is the only thing colour reports.
+
+palette = "wall"
+
+format = """
+[┌](bold accent) [位置](line) $directory$git_branch$git_state$git_status$cmd_duration$status
+[└](bold accent) $character"""
+
+[directory]
+# The primary value on the line, so it gets full text weight.
+style = "text"
+format = "[$path]($style)[$read_only]($read_only_style)"
+truncation_length = 3
+truncation_symbol = "…/"
+truncate_to_repo = true
+read_only = " 施錠"
+read_only_style = "warn"
+
+[git_branch]
+symbol = ""
+format = "  [枝](line) [$branch](text)"
+
+[git_state]
+format = " [$state](warn)"
+
+[git_status]
+# Staged, modified and untracked are states, not faults: they stay secondary.
+# Only the two things you actually have to resolve take a colour.
+format = '( [$all_status$ahead_behind]($style))'
+style = "dim"
+staged = '+$count '
+modified = '~$count '
+untracked = '?$count '
+deleted = '-$count '
+renamed = '»$count '
+stashed = '*$count '
+ahead = '⇡$count '
+behind = '⇣$count '
+conflicted = '[!$count](alert) '
+diverged = '[⇕$ahead_count/$behind_count](warn) '
+
+[cmd_duration]
+min_time = 2000
+format = "  [経過](line) [$duration](dim)"
+
+[status]
+# The one place a number means failure, so the one place it is red.
+disabled = false
+format = "  [異常](line) [$status]($style)"
+style = "alert"
+
+[character]
+success_symbol = "[▸](bold accent)"
+error_symbol = "[▸](bold alert)"
+vimcmd_symbol = "[◂](bold warn)"
+
+# Disabled language modules: the version of the toolchain in the current
+# directory is not something you read every command.
+[golang]
+disabled = true
+[nodejs]
+disabled = true
+[python]
+disabled = true
+[rust]
+disabled = true
+[ruby]
+disabled = true
+[java]
+disabled = true
+[php]
+disabled = true
+[package]
+disabled = true
+
+# >>> tokyo-palette
+# Rewritten on every wallpaper change. Keep this block last.
+[palettes.wall]
+text = "#F1DAE3"
+dim = "#8A6071"
+line = "#335270"
+accent = "#8DB3D9"
+accent2 = "#477BAF"
+alert = "#FF4D5A"
+warn = "#FFB020"
+# <<< tokyo-palette

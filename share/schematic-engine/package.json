@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@viz-js/viz": "^3.30.0"
+  },
+  "devDependencies": {
+    "mermaid": "^11.17.2"
+  }
+}

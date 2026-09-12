@@ -1,0 +1,53 @@
+#!/bin/sh
+# Claude Code hook -> agent bus. One line of JSON per event.
+#
+# Registered for SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/
+# Notification/Stop/SessionEnd in ~/.claude/settings.json.
+#
+# This runs in the agent's critical path: a PreToolUse hook that exits non-zero
+# BLOCKS the tool call. So every step is guarded and the script always exits 0.
+
+BUS="${XDG_RUNTIME_DIR:-/tmp}/agentbus.jsonl"
+IN=$(cat)
+
+printf '%s' "$IN" | jq -c '
+  {
+    t:    (now * 1000 | floor),
+    cli:  "claude",
+    sess: ((.session_id // "") | .[0:8]),
+    ev:   (.hook_event_name // "?"),
+    cwd:  (.cwd // ""),
+    tool: (.tool_name // ""),
+    # Every tool names its subject in a different key; take the first that fits.
+    arg:  (((.tool_input.file_path // .tool_input.path // .tool_input.command
+             // .tool_input.pattern // .tool_input.url // .tool_input.description
+             // .tool_input.prompt // "") | tostring) | .[0:160]),
+    msg:  (((.message // "") | tostring) | .[0:160]),
+    err:  (.tool_response | if type == "object"
+                           then (has("error") or .success == false) else false end)
+  }' >> "$BUS" 2>/dev/null
+
+EV=$(printf '%s' "$IN" | jq -r '.hook_event_name // ""' 2>/dev/null)
+
+case "$EV" in
+Stop)
+    # Fires once per turn, so it is cheap enough to also snapshot token usage.
+    # The hook payload points at the transcript but does not include usage.
+    TP=$(printf '%s' "$IN" | jq -r '.transcript_path // ""' 2>/dev/null)
+    SS=$(printf '%s' "$IN" | jq -r '(.session_id // "") | .[0:8]' 2>/dev/null)
+    [ -f "$TP" ] && tail -n 40 "$TP" | jq -c --arg sess "$SS" '
+        select(.message.usage) | .message.usage |
+        { t: (now * 1000 | floor), cli: "claude", sess: $sess, ev: "tokens",
+          ctx: ((.input_tokens // 0) + (.cache_read_input_tokens // 0)
+                + (.cache_creation_input_tokens // 0)),
+          out: (.output_tokens // 0) }' 2>/dev/null | tail -n 1 >> "$BUS"
+    ;;
+SessionStart)
+    # Bus lives on tmpfs. Rotate rather than truncate: tail -F follows by name
+    # and picks the new file up, where a truncate would replay the whole file.
+    SZ=$(wc -c < "$BUS" 2>/dev/null || echo 0)
+    [ "$SZ" -gt 2000000 ] && mv -f "$BUS" "$BUS.1" 2>/dev/null
+    ;;
+esac
+
+exit 0

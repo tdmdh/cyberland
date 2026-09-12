@@ -1,0 +1,49 @@
+# wallust 4.x config. Previous (v3) version kept at wallust.toml.v3.bak
+# Schema: man 5 wallust
+
+# How the image is parsed: full | resized | wal | thumb | fastresize
+backend = "resized"
+
+# How those colors become a palette: salience | ansi | kmeans
+palette = "kmeans"
+
+# dark background, light foreground
+style = "dark"
+
+# Dim the lower half of the palette for the illusion of 16 distinct colors.
+# This is what the old config's "dark16" meant.
+use16cols = true
+
+# Keeps text readable against the generated background.
+check_contrast = true
+
+[templates]
+hypr.template = 'colors-hypr.lua'
+hypr.target = '~/.config/hypr/wallust/colors.lua'
+
+# rofi is written by bin/tokyo-palette instead: it needs the clamped accent,
+# which a wallust template cannot compute.
+
+kitty.template = 'colors-kitty.conf'
+kitty.target = '~/.config/kitty/kitty-themes/01-Wallust.conf'
+
+superfile.template = 'superfile.toml'
+superfile.target = '~/.config/superfile/theme/wallust.toml'
+
+kde.template = 'colors-kde'
+kde.target = '~/.config/kdeglobals'
+
+cava.template = 'colors-cava'
+cava.target = '~/.config/cava/config'
+
+quickshell.template = 'qml_color.json'
+quickshell.target = '~/.config/quickshell/qml_color.json'
+
+# Applied here, right after the templates are written.
+[hooks]
+# Clamp into the Tokyo-tech palette BEFORE the reload, or Hyprland re-reads
+# theme.lua while tokyo.lua is still the previous wallpaper's.
+hyprland = '$HOME/.config/hypr/bin/tokyo-palette && hyprctl reload'
+kitty = 'pkill -SIGUSR1 kitty || true'
+# Nudge running KDE apps (dolphin) to re-read kdeglobals.
+kde = 'dbus-send --session --type=signal /KGlobalSettings org.kde.KGlobalSettings.notifyChange int32:0 int32:0 || true'

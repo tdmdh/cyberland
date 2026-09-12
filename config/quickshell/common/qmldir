@@ -1,0 +1,20 @@
+# Shared design system. Quickshell blocks '..' in QML imports, so every
+# module carries a `common -> ../common` symlink and does `import "./common"`.
+# New module: ln -sfn ../common <name>/common
+singleton Theme 1.0 Theme.qml
+singleton Sys 1.0 Sys.qml
+Cluster 1.0 Cluster.qml
+Meter 1.0 Meter.qml
+Bracket 1.0 Bracket.qml
+Corners 1.0 Corners.qml
+Tag 1.0 Tag.qml
+Panel 1.0 Panel.qml
+Btn 1.0 Btn.qml
+Wheel 1.0 Wheel.qml
+Standby 1.0 Standby.qml
+Scanlines 1.0 Scanlines.qml
+ChamferBox 1.0 ChamferBox.qml
+GlitchText 1.0 GlitchText.qml
+DynamicPill 1.0 DynamicPill.qml
+Pip 1.0 Pip.qml
+Readout 1.0 Readout.qml

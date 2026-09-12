@@ -1,0 +1,19 @@
+#!/bin/sh
+# Unified Modal Deck Dispatcher
+#
+# All modal panels are consolidated into the single high-performance `deck` host.
+# Morphing between panels happens instantaneously with physical Apple spring physics,
+# zero process racing, and zero keypress latency.
+
+target=$1
+[ -n "$target" ] || { echo "usage: qs-panel <module>" >&2; exit 2; }
+
+case "$target" in
+    control|music|cyberpad|keys|agent|clip|todo|sensor|radar|dev|nodemap|expose|palette|schematic|launcher|notify)
+        exec qs -c deck ipc call deck toggle "$target"
+        ;;
+    *)
+        qs -c deck ipc call deck close >/dev/null 2>&1 &
+        exec qs -c "$target" ipc call "$target" toggle
+        ;;
+esac

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Real-time vector diagram renderer for Quickshell Schematic workbench.
+# Uses WebAssembly Graphviz & Mermaid translator.
+# install.sh builds the engine into ~/.local/share/hypr/schematic-engine.
+exec bun "$HOME/.local/share/hypr/schematic-engine/render.js" "$@"

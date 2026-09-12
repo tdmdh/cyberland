@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Hardware sensor probe for Quickshell Cyberdeck.
+
+Gathers real-time telemetry:
+  - CPU: per-core thermal readings, package temp, per-core frequencies
+  - GPU: NVIDIA RTX metrics (utilization, temp, VRAM, power draw, fan speed, clocks)
+  - NVMe: drive temperatures
+  - RAM: SPD thermal sensors (DDR5)
+  - Memory & Swap usage
+"""
+import os, glob, subprocess, json, sys
+
+def read_file(path):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+def main():
+    data = {}
+
+    # ---- CPU Cores & Frequencies ----
+    cores = []
+    for f in sorted(glob.glob('/sys/devices/system/cpu/cpu[0-9]*'), key=lambda x: int(os.path.basename(x)[3:])):
+        cid = os.path.basename(f)
+        freq = read_file(f'{f}/cpufreq/scaling_cur_freq')
+        cores.append({
+            'id': cid,
+            'freq_mhz': round(int(freq) / 1000) if freq.isdigit() else 0
+        })
+    data['cores'] = cores
+
+    # ---- Core Temperatures (hwmon coretemp) ----
+    coretemp_path = None
+    for h in glob.glob('/sys/class/hwmon/hwmon*'):
+        if read_file(f'{h}/name') in ('coretemp', 'k10temp'):
+            coretemp_path = h
+            break
+
+    core_temps = []
+    pkg_temp = 0
+    if coretemp_path:
+        for f in sorted(glob.glob(f'{coretemp_path}/temp*_input')):
+            base = f[:-6]
+            label = read_file(f'{base}_label') or os.path.basename(base)
+            val = read_file(f)
+            temp = round(int(val) / 1000) if val.isdigit() else 0
+            if 'Package' in label or label == 'temp1':
+                pkg_temp = temp
+            else:
+                core_temps.append({'label': label, 'temp': temp})
+
+    data['cpu_pkg_temp'] = pkg_temp
+    data['core_temps'] = core_temps
+
+    # ---- GPU Telemetry (nvidia-smi) ----
+    nvidia_bin = "/usr/bin/nvidia-smi"
+    if os.path.exists(nvidia_bin):
+        try:
+            res = subprocess.run(
+                [nvidia_bin, '--query-gpu=name,utilization.gpu,temperature.gpu,power.draw,fan.speed,memory.used,memory.total,clocks.current.graphics,clocks.current.memory',
+                 '--format=csv,noheader,nounits'],
+                capture_output=True, text=True, timeout=1.5)
+            if res.returncode == 0:
+                parts = [p.strip() for p in res.stdout.strip().split(',')]
+                data['gpu'] = {
+                    'name': parts[0],
+                    'util': int(parts[1]) if parts[1].isdigit() else 0,
+                    'temp': int(parts[2]) if parts[2].isdigit() else 0,
+                    'power': float(parts[3]) if parts[3].replace('.', '', 1).isdigit() else 0.0,
+                    'fan': int(parts[4]) if parts[4].isdigit() else 0,
+                    'mem_used': int(parts[5]) if parts[5].isdigit() else 0,
+                    'mem_total': int(parts[6]) if parts[6].isdigit() else 0,
+                    'clock_core': int(parts[7]) if parts[7].isdigit() else 0,
+                    'clock_mem': int(parts[8]) if parts[8].isdigit() else 0
+                }
+            else:
+                data['gpu'] = None
+        except Exception:
+            data['gpu'] = None
+    else:
+        data['gpu'] = None
+
+    # ---- NVMe Drives ----
+    nvme_temps = []
+    for h in glob.glob('/sys/class/hwmon/hwmon*'):
+        if read_file(f'{h}/name') == 'nvme':
+            for f in sorted(glob.glob(f'{h}/temp*_input')):
+                val = read_file(f)
+                if val.isdigit():
+                    nvme_temps.append(round(int(val) / 1000))
+    data['nvme_temps'] = nvme_temps
+
+    # ---- RAM SPD Sensors ----
+    spd_temps = []
+    for h in glob.glob('/sys/class/hwmon/hwmon*'):
+        if read_file(f'{h}/name') == 'spd5118':
+            val = read_file(f'{h}/temp1_input')
+            if val.isdigit():
+                spd_temps.append(round(int(val) / 1000))
+    data['spd_temps'] = spd_temps
+
+    # ---- Memory & Swap (MB) ----
+    mem_info = {}
+    for line in read_file('/proc/meminfo').splitlines()[:15]:
+        parts = line.split(':')
+        if len(parts) == 2:
+            val = parts[1].strip().split()[0]
+            if val.isdigit():
+                mem_info[parts[0].strip()] = int(val) // 1024
+
+    total_ram = mem_info.get('MemTotal', 0)
+    avail_ram = mem_info.get('MemAvailable', 0)
+    used_ram = total_ram - avail_ram
+    total_swap = mem_info.get('SwapTotal', 0)
+    free_swap = mem_info.get('SwapFree', 0)
+    used_swap = total_swap - free_swap
+
+    data['memory'] = {
+        'total_mb': total_ram,
+        'used_mb': used_ram,
+        'pct': round(used_ram * 100 / total_ram) if total_ram else 0,
+        'swap_total_mb': total_swap,
+        'swap_used_mb': used_swap,
+        'swap_pct': round(used_swap * 100 / total_swap) if total_swap else 0
+    }
+
+    print(json.dumps(data))
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,36 @@
+#!/bin/sh
+# Generic JSONL -> agent bus adapter, for the CLIs that have no hook system.
+#
+#   qwen -o stream-json -p "..."      | agentbus-pipe qwen
+#   codex exec --json "..."           | agentbus-pipe codex
+#   curl -sN localhost:4096/event     | agentbus-pipe opencode
+#
+# Every CLI nests its tool name somewhere different, and the shapes change
+# between releases. Rather than track four schemas, this walks each event
+# recursively and takes the first field that looks like a tool name / subject.
+# Best-effort by design: it degrades to "no line emitted", never to garbage.
+
+CLI="${1:?usage: agentbus-pipe <cli-name>}"
+BUS="${XDG_RUNTIME_DIR:-/tmp}/agentbus.jsonl"
+SESS=$(od -An -N3 -tx1 /dev/urandom | tr -d ' \n')
+
+# -R + fromjson? so SSE framing and any non-JSON chatter are skipped, not fatal.
+exec stdbuf -oL jq -Rc --unbuffered --arg cli "$CLI" --arg sess "$SESS" '
+  (sub("^data: *"; "") | fromjson?) as $e
+  | select($e != null)
+  | ([$e | .. | objects
+        | (.tool_name? // .toolName? // .tool? // .name?) | strings] | first) as $tool
+  | select($tool != null and $tool != "")
+  | {
+      t:    (now * 1000 | floor),
+      cli:  $cli,
+      sess: $sess,
+      ev:   "PreToolUse",
+      cwd:  (($e | .. | objects | .cwd? // .workdir? | strings) // "" | tostring),
+      tool: $tool,
+      arg:  (([$e | .. | objects
+                | (.file_path? // .path? // .command? // .pattern? // .url?)
+                | strings] | first) // "" | tostring | .[0:160]),
+      msg:  "",
+      err:  false
+    }' >> "$BUS" 2>/dev/null

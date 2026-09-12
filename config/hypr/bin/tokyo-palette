@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+"""Build the desktop palette from wallust's generated colours.
+
+Runs after `wallust run` has written colors.lua, and re-emits the files the
+desktop actually reads (tokyo.lua for Hyprland, qml_color.json for quickshell,
+plus the terminal and prompt drops). The other wallust templates are
+untouched.
+
+Every colour here comes from the wallpaper. There is no hue band and no fixed
+neutral ramp: the background keeps wallust's own background, the text keeps
+its foreground, and the accent is whichever of color1..6 / 9..14 carries the
+most of the wallpaper's character. A blue wallpaper gives a blue desktop.
+
+What is enforced is legibility, not taste:
+
+  * the ground stays dark enough to be a ground        (luminance floor)
+  * text clears 12:1 against it                        (far above WCAG AA)
+  * the accent clears 7:1 against it                   (above AA)
+
+A wallust colour that fails one of those is lifted in lightness, keeping its
+hue and saturation -- so it is still the wallpaper's colour, just a readable
+version of it.
+
+`alert` and `warn` are the two exceptions, and stay fixed. A wallpaper-derived
+error colour is a bad error colour: in this design colour only ever means
+"wrong", so red has to be red on every wallpaper.
+
+Run with --selftest to check the guarantees.
+"""
+import colorsys, json, os, re, sys
+
+HOME = os.path.expanduser("~")
+SRC  = f"{HOME}/.config/hypr/wallust/colors.lua"
+LUA  = f"{HOME}/.config/hypr/wallust/tokyo.lua"
+QML  = f"{HOME}/.config/quickshell/qml_color.json"
+GHOST = f"{HOME}/.config/ghostty/wallust.conf"
+SH   = f"{HOME}/.config/hypr/wallust/tokyo.sh"
+STAR = f"{HOME}/.config/starship.toml"
+
+# starship has no include mechanism, so its palette has to live inside the
+# hand-written config. Only the region between these two lines is rewritten.
+MARK_A = "# >>> tokyo-palette"
+MARK_B = "# <<< tokyo-palette"
+
+# Legibility floors. These are the only hard numbers left in the design.
+BG_MAX_L    = 0.075   # above this a "ground" starts competing with content
+LAYER_STEP  = (0.0, 0.028, 0.058, 0.098)   # window, layer1, layer2, layer3
+TEXT_MIN_L  = 0.88
+SEC_L       = 0.46
+TEXT_CONTRAST   = 12.0
+ACCENT_CONTRAST = 7.0   # above AA: the accent is a signal at arm's length,
+                        # not body text, and wallust's colours run muted
+
+
+def hexof(r, g, b):
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def hsl(h, s, l):
+    return hexof(*colorsys.hls_to_rgb((h % 360) / 360.0, l, s))
+
+
+def parse(hx, fallback=(0.0, 0.0, 0.05)):
+    """'1A2B3C' -> (hue deg, saturation, lightness). Junk yields the fallback."""
+    if not hx or len(hx) < 6:
+        return fallback
+    try:
+        r, g, b = (int(hx[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    except ValueError:
+        return fallback
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return h * 360.0, s, l
+
+
+def lum(h, s, l):
+    """WCAG relative luminance of an HSL triple."""
+    def ch(v):
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = colorsys.hls_to_rgb((h % 360) / 360.0, l, s)
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+
+def contrast(a, b):
+    la, lb = lum(*a), lum(*b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def lift(fg, bg, ratio):
+    """Raise a colour's lightness until it clears `ratio` against `bg`.
+
+    Hue and saturation are untouched, so the result is still recognisably the
+    wallpaper's colour. Steps rather than solving analytically: the WCAG curve
+    is piecewise and 1% steps are exact enough for a colour we then round to
+    8 bits anyway.
+    """
+    h, s, l = fg
+    while l < 0.97 and contrast((h, s, l), bg) < ratio:
+        l += 0.01
+    return h, s, l
+
+
+def read_wallust(path):
+    """wallust writes `color4 = "rgb(145BB9)"`. Take hex per key, tolerate junk."""
+    try:
+        txt = open(path).read()
+    except OSError:
+        return {}
+    return {k: v for k, v in re.findall(r'(\w+)\s*=\s*"[^"]*?([0-9A-Fa-f]{6})[^"]*"', txt)}
+
+
+def pick_accent(colors):
+    """The wallpaper colour with the most character.
+
+    Saturation decides, with lightness as a weighted tie-break: wallust's
+    use16cols dims color1..7, so an equally saturated colour from the bright
+    half is the better pick.
+
+    0, 7, 8 and 15 are skipped. In a 16-colour palette those four are the
+    neutral ramp -- black, white, bright black, bright white -- and wallust
+    sets color7 to the foreground verbatim. Left in, color7 wins on almost
+    every wallpaper (it is the lightest and most saturated by construction)
+    and the "accent" comes out identical to the body text.
+
+    Near-black and near-white are excluded outright: their hue is rounding
+    noise, and lifting such a colour produces an arbitrary one.
+    """
+    best, best_score = None, -1.0
+    for i in [i for i in range(1, 15) if i not in (7, 8)]:
+        h, s, l = parse(colors.get(f"color{i}"), (None, 0, 0))
+        if h is None or not (0.12 < l < 0.92):
+            continue
+        score = s + l * 0.25
+        if score > best_score:
+            best, best_score = (h, s, l), score
+    return best
+
+
+def build(colors):
+    bg_h, bg_s, bg_l = parse(colors.get("background") or colors.get("color0"),
+                             (220.0, 0.10, 0.045))
+    # wallust's own background, only capped. #030302 stays #030302.
+    bg_l = min(bg_l, BG_MAX_L)
+    ground = (bg_h, bg_s, bg_l)
+    ramp = [hsl(bg_h, bg_s, min(bg_l + step, 0.20)) for step in LAYER_STEP]
+
+    fg_h, fg_s, fg_l = parse(colors.get("foreground") or colors.get("color15"),
+                             (220.0, 0.08, 0.92))
+    text = lift((fg_h, fg_s, max(fg_l, TEXT_MIN_L)), ground, TEXT_CONTRAST)
+    sec = (fg_h, min(fg_s, 0.18), SEC_L)
+
+    acc = pick_accent(colors)
+    if acc is None:
+        # A greyscale wallpaper has no colour to take. Fall back to the
+        # foreground rather than inventing a hue the image does not contain.
+        acc = (fg_h, max(fg_s, 0.10), 0.70)
+    acc = lift(acc, ground, ACCENT_CONTRAST)
+    a_h, a_s, a_l = acc
+
+    return {
+        "windowBackground":    ramp[0],
+        "layerBackground1":    ramp[1],
+        "layerBackground2":    ramp[2],
+        "layerBackground3":    ramp[3],
+
+        "primaryText":         hsl(*text),
+        "surfaceText":         hsl(*text),
+        "secondaryText":       hsl(*sec),
+
+        # Hairlines are the accent held well back, so the wireframe reads as
+        # drawn rather than lit -- there is no glow to carry it.
+        "borderPrimary":       hsl(a_h, a_s * 0.75, 0.32),
+        "borderSecondary":     ramp[3],
+
+        "accentPrimary":       hsl(a_h, a_s, a_l),
+        "accentSecondary":     hsl(a_h, a_s * 0.85, max(a_l - 0.22, 0.30)),
+        "accentPrimaryText":   ramp[0],
+        "accentDim":           hsl(a_h, a_s * 0.80, 0.22),
+
+        "selectionBackground": hsl(a_h, a_s, a_l),
+        "selectionText":       ramp[0],
+
+        # The two exceptions. Colour in this design only ever means "wrong",
+        # so these must mean the same thing on every wallpaper.
+        "alert":               "#FF4D5A",
+        "warn":                "#FFB020",
+        "ok":                  hsl(a_h, a_s, a_l),
+
+        "shadowColor":         "#000000",
+        "accentHue":           round(a_h, 1),
+    }
+
+
+def ansi_ramp(p):
+    """color0..15 mapped onto the design's six colours.
+
+    Everything that paints with ANSI -- the terminal, and so every CLI inside
+    it -- goes through here, so the shell reads as the same machine as the
+    HUD. Red and amber keep their ANSI slots because that is where tools
+    already put failure; every other slot resolves to accent, secondary or
+    text rather than inventing a hue the wallpaper does not contain.
+
+    The cost is that green/cyan/magenta collapse onto one colour, so a tool
+    distinguishing four things by hue now distinguishes them by one. That is
+    the design's trade: colour only ever means "wrong".
+    """
+    bg, fg, ac = p["windowBackground"], p["primaryText"], p["accentPrimary"]
+    a2, sec, al = p["accentSecondary"], p["secondaryText"], p["alert"]
+    return [bg, al, ac, p["warn"], a2, a2, ac, fg,
+            sec, al, ac, p["warn"], ac, a2, ac, fg]
+
+
+
+def write_ghostty(p):
+    """The terminal ground, so the shell sits on the desktop's black.
+
+    This file used to be a stale JaKooLit template output that nothing
+    regenerated: the terminal stayed on a #161616 ground and an unclamped
+    wallust ramp while every other surface tracked the wallpaper. It is
+    ~/.config/ghostty/config's last `config-file`, so it wins over the theme.
+
+    Ghostty has no reload signal -- new windows pick this up, existing ones
+    need ctrl+shift+, -- which is why nothing here is in the hot path.
+    """
+    bg, fg, ac = p["windowBackground"], p["primaryText"], p["accentPrimary"]
+    os.makedirs(os.path.dirname(GHOST), exist_ok=True)
+    with open(GHOST, "w") as f:
+        f.write("# Generated by hypr/bin/tokyo-palette. Do not edit.\n")
+        for k, v in [("background", bg), ("foreground", fg),
+                     ("cursor-color", ac), ("cursor-text", p["accentPrimaryText"]),
+                     ("selection-background", p["selectionBackground"]),
+                     ("selection-foreground", p["selectionText"])]:
+            f.write(f"{k} = {v}\n")
+        for i, c in enumerate(ansi_ramp(p)):
+            f.write(f"palette = {i}={c}\n")
+
+
+def write_shell(p):
+    """The palette as shell variables, for the parts of zsh that take a colour.
+
+    Keys are the qml_color.json names in SCREAMING_SNAKE, not a second set of
+    shorter ones: one vocabulary across the desktop is the whole point, and a
+    renamed colour is a colour that drifts.
+
+    Sourced once per shell, so a wallpaper change reaches shells started
+    after it. Re-sourcing on every prompt would cost a stat and a parse per
+    command to track a file that changes a few times a day.
+    """
+    os.makedirs(os.path.dirname(SH), exist_ok=True)
+    with open(SH, "w") as f:
+        f.write("# Generated by hypr/bin/tokyo-palette. Do not edit.\n")
+        for k, v in p.items():
+            name = re.sub(r"(?<!^)(?=[A-Z])", "_", k).upper()
+            f.write(f"TOKYO_{name}='{v}'\n")
+
+
+def write_starship(p):
+    """Rewrite the palette block in starship.toml, leaving the rest alone.
+
+    The block is a TOML table, so it has to stay at the end of the file or be
+    followed by another `[section]` -- bare keys appended after it would land
+    inside the palette. Missing markers means a config that predates this, so
+    the block is appended once and picked up on the next run.
+    """
+    block = "\n".join([
+        MARK_A,
+        "# Rewritten on every wallpaper change. Keep this block last.",
+        "[palettes.wall]",
+        *(f'{name} = "{p[key]}"' for name, key in [
+            ("text",    "primaryText"),
+            ("dim",     "secondaryText"),
+            ("line",    "borderPrimary"),
+            ("accent",  "accentPrimary"),
+            ("accent2", "accentSecondary"),
+            ("alert",   "alert"),
+            ("warn",    "warn"),
+        ]),
+        MARK_B,
+    ])
+    try:
+        txt = open(STAR).read()
+    except OSError:
+        return
+    if MARK_A in txt and MARK_B in txt:
+        txt = re.sub(re.escape(MARK_A) + r".*?" + re.escape(MARK_B),
+                     lambda _: block, txt, flags=re.S)
+    else:
+        txt = txt.rstrip("\n") + "\n\n" + block + "\n"
+    with open(STAR, "w") as f:
+        f.write(txt)
+
+
+def write(p):
+    os.makedirs(os.path.dirname(LUA), exist_ok=True)
+    write_ghostty(p)
+    write_shell(p)
+    write_starship(p)
+    with open(QML, "w") as f:
+        json.dump(p, f, indent=4)
+        f.write("\n")
+    with open(LUA, "w") as f:
+        f.write("-- Generated by bin/tokyo-palette. Do not edit.\nreturn {\n")
+        for k, v in p.items():
+            f.write(f'    {k} = {v!r},\n' if not isinstance(v, str)
+                    else f'    {k} = "{v}",\n')
+        f.write("}\n")
+
+
+def selftest():
+    import random
+
+    def ratio(a, b):
+        return contrast(parse(a.lstrip("#")), parse(b.lstrip("#")))
+
+    def check(p, label):
+        bg = p["windowBackground"]
+        # 0.005, not 0: HSL lightness is (max+min)/2 and both channels round
+        # to 8 bits, so a colour capped at BG_MAX_L reads back a hair above it.
+        assert parse(bg.lstrip("#"))[2] <= BG_MAX_L + 0.005, f"{label}: ground too light {bg}"
+        assert ratio(p["primaryText"], bg) >= TEXT_CONTRAST - 0.1, \
+            f"{label}: text contrast {ratio(p['primaryText'], bg):.1f}"
+        assert ratio(p["accentPrimary"], bg) >= ACCENT_CONTRAST - 0.2, \
+            f"{label}: accent contrast {ratio(p['accentPrimary'], bg):.1f}"
+        assert p["alert"] == "#FF4D5A" and p["warn"] == "#FFB020", f"{label}: semantics moved"
+
+    # 500 random wallpapers must all produce a legible desktop.
+    for n in range(500):
+        c = {f"color{i}": "%06X" % random.randrange(1 << 24) for i in range(16)}
+        c["background"] = "%06X" % random.randrange(1 << 20)
+        c["foreground"] = "%06X" % random.randrange(0xC00000, 1 << 24)
+        check(build(c), f"random#{n}")
+
+    # Degenerate inputs must not crash or produce an unreadable desktop.
+    check(build({}), "empty")
+    check(build({"background": "000000", "foreground": "FFFFFF"}), "pure mono")
+    check(build({f"color{i}": "808080" for i in range(16)}), "flat grey")
+
+    # The accent must actually be the wallpaper's colour, not a fixed one.
+    red  = build({"background": "0A0505", "foreground": "F5E8E8", "color9": "D02020"})
+    blue = build({"background": "05050A", "foreground": "E8E8F5", "color9": "2040D0"})
+    assert abs(red["accentHue"] - 0) < 30 or abs(red["accentHue"] - 360) < 30, \
+        f"red wallpaper gave hue {red['accentHue']}"
+    assert 200 < blue["accentHue"] < 260, f"blue wallpaper gave hue {blue['accentHue']}"
+    assert red["accentPrimary"] != blue["accentPrimary"]
+
+    # Regression: color7 is the foreground verbatim, so leaving it in the
+    # candidate set made the accent identical to the body text.
+    fg7 = build({"background": "010103", "foreground": "AEBEDE",
+                 "color7": "AEBEDE", "color14": "6279A6"})
+    assert fg7["accentPrimary"] != fg7["primaryText"], "accent collapsed onto text"
+    assert 200 < fg7["accentHue"] < 240, fg7["accentHue"]
+
+    # Neutrals track the wallpaper too.
+    warm = build({"background": "3A1E05", "foreground": "FFF2E0"})
+    cool = build({"background": "02030A", "foreground": "DCE6F4"})
+    assert warm["windowBackground"] != cool["windowBackground"], "neutrals not tracking"
+
+    # The ANSI ramp keeps the two semantic slots and stays legible: every
+    # terminal colour is read against slot 0, which is the ground.
+    ramp = ansi_ramp(build({}))
+    assert len(ramp) == 16, len(ramp)
+    assert ramp[1] == ramp[9] == "#FF4D5A", "red slot is not alert"
+    assert ramp[3] == ramp[11] == "#FFB020", "amber slot is not warn"
+    for n in range(200):
+        c = {f"color{i}": "%06X" % random.randrange(1 << 24) for i in range(16)}
+        c["background"] = "%06X" % random.randrange(1 << 20)
+        c["foreground"] = "%06X" % random.randrange(0xC00000, 1 << 24)
+        r = ansi_ramp(build(c))
+        assert r[0] == build(c)["windowBackground"], "slot 0 is not the ground"
+        for i in (2, 6, 7, 10, 12, 14, 15):
+            assert ratio(r[i], r[0]) >= ACCENT_CONTRAST - 0.2, \
+                f"ramp#{n} slot {i} contrast {ratio(r[i], r[0]):.1f}"
+
+    # The starship block replaces itself in place rather than stacking up,
+    # and lands somewhere TOML will actually read it as a table.
+    import tempfile
+    global STAR
+    keep, pal = STAR, build({})
+    with tempfile.TemporaryDirectory() as d:
+        STAR = f"{d}/starship.toml"
+        open(STAR, "w").write('palette = "wall"\n\n[character]\nformat = "x"\n')
+        write_starship(pal)
+        write_starship(pal)
+        txt = open(STAR).read()
+        assert txt.count(MARK_A) == 1 and txt.count("[palettes.wall]") == 1, \
+            "starship block duplicated on re-run"
+        assert txt.index(MARK_A) > txt.index("[character]"), "block is not last"
+        assert pal["accentPrimary"] in txt and 'format = "x"' in txt, \
+            "starship block lost the accent or clobbered the config"
+    STAR = keep
+
+    print("tokyo-palette selftest: ok")
+
+
+if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        selftest()
+    else:
+        write(build(read_wallust(SRC)))

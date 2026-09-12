@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Emit one JSON line per listening socket / service on stdout, then exit.
+
+Used by Quickshell's `radar` module.
+Reads `ss -tulpnH` for listening sockets (TCP LISTEN, UDP UNCONN) and correlates
+running Docker containers (via `docker ps`) and /proc info.
+
+Outputs JSON lines:
+{"proto":"tcp", "port":3000, "bind":"127.0.0.1", "pid":1234, "proc":"node", "user":"you", "cmd":"...", "container":"", "public":false}
+"""
+import json
+import os
+import pwd
+import re
+import subprocess
+import sys
+
+USER_MAP = {}
+
+def get_user(uid):
+    if uid not in USER_MAP:
+        try:
+            USER_MAP[uid] = pwd.getpwuid(uid).pw_name
+        except Exception:
+            USER_MAP[uid] = str(uid)
+    return USER_MAP[uid]
+
+def get_proc_info(pid):
+    """Read proc name, user, and short cmdline from /proc/<pid>."""
+    if not pid:
+        return "", "", ""
+    proc_dir = f"/proc/{pid}"
+    if not os.path.isdir(proc_dir):
+        return "", "", ""
+    
+    name = ""
+    user = ""
+    cmd = ""
+    try:
+        with open(f"{proc_dir}/status", "r") as f:
+            for line in f:
+                if line.startswith("Name:"):
+                    name = line.split(":", 1)[1].strip()
+                elif line.startswith("Uid:"):
+                    parts = line.split()
+                    if len(parts) > 1:
+                        user = get_user(int(parts[1]))
+    except Exception:
+        pass
+
+    try:
+        with open(f"{proc_dir}/cmdline", "rb") as f:
+            raw = f.read()
+            parts = raw.split(b"\x00")
+            cmd = " ".join(p.decode("utf-8", "replace") for p in parts if p).strip()
+    except Exception:
+        pass
+
+    return name, user, cmd
+
+def get_docker_port_map():
+    """Map host_port -> container_name from `docker ps`."""
+    mapping = {}
+    try:
+        p = subprocess.run(["docker", "ps", "--format", "{{json .}}"],
+                           capture_output=True, text=True, timeout=1.5)
+        if p.returncode == 0:
+            for line in p.stdout.splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    c = json.loads(line)
+                    c_name = c.get("Names", "")
+                    ports_str = c.get("Ports", "")
+                    # e.g. "0.0.0.0:8080->80/tcp, :::8080->80/tcp"
+                    for match in re.finditer(r"(?:0\.0\.0\.0|::|127\.0\.0\.1|\*):(\d+)->", ports_str):
+                        h_port = int(match.group(1))
+                        mapping[h_port] = c_name
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return mapping
+
+def parse_ss():
+    try:
+        p = subprocess.run(["ss", "-tulpnH"], capture_output=True, text=True, timeout=2.0)
+        if p.returncode != 0:
+            return []
+        lines = p.stdout.splitlines()
+    except Exception:
+        return []
+
+    docker_map = get_docker_port_map()
+    results = []
+    seen = set()
+
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        proto = parts[0].lower() # tcp / udp
+        state = parts[1].upper() # LISTEN / UNCONN
+
+        # We only care about listening sockets
+        if proto == "tcp" and state != "LISTEN":
+            continue
+        if proto == "udp" and state not in ("UNCONN", "LISTEN"):
+            continue
+
+        local_addr = parts[4]
+
+        # Extract address and port
+        # Formats: 127.0.0.1:46857, *:27036, [::]:22, 0.0.0.0:22, [fe80::...%eth0]:5353
+        port_match = re.search(r":(\d+)$", local_addr)
+        if not port_match:
+            continue
+        port = int(port_match.group(1))
+        bind_addr = local_addr[:port_match.start()]
+        if bind_addr.startswith("[") and bind_addr.endswith("]"):
+            bind_addr = bind_addr[1:-1]
+        if not bind_addr:
+            bind_addr = "*"
+
+        # Determine if public
+        is_public = bind_addr in ("*", "0.0.0.0", "::", "[::]")
+
+        # Parse process info if present
+        pid = 0
+        proc_name = ""
+        user = ""
+        cmd = ""
+
+        rest = " ".join(parts[5:])
+        # Look for users:(("proc",pid=123,fd=45))
+        u_match = re.search(r'users:\(\("([^"]+)",pid=(\d+)', rest)
+        if u_match:
+            proc_name = u_match.group(1)
+            pid = int(u_match.group(2))
+            p_name, p_user, p_cmd = get_proc_info(pid)
+            if p_name:
+                proc_name = p_name
+            user = p_user
+            cmd = p_cmd
+        else:
+            # Maybe a system / kernel / root socket without permissions
+            if port == 22:
+                proc_name = "sshd"
+            elif port == 53:
+                proc_name = "systemd-resolved"
+
+        container = docker_map.get(port, "")
+
+        # Deduplication key: (proto, port, bind_addr)
+        key = (proto, port, bind_addr)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        results.append({
+            "proto": proto,
+            "port": port,
+            "bind": bind_addr,
+            "public": is_public,
+            "pid": pid,
+            "proc": proc_name if proc_name else "--",
+            "user": user if user else "--",
+            "cmd": cmd if cmd else proc_name,
+            "container": container
+        })
+
+    # Sort primarily by port number ascending
+    results.sort(key=lambda x: (x["port"], x["proto"]))
+    return results
+
+def main():
+    items = parse_ss()
+    for item in items:
+        print(json.dumps(item))
+
+if __name__ == "__main__":
+    main()

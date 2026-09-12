@@ -1,0 +1,7 @@
+# Per-machine display layout, seeded from the .example by install.sh.
+config/hypr/conf/monitors_local.lua
+
+# Runtime leftovers.
+config/nvim/lazy-lock.json.bak
+*.bak
+*.orig

@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Emit one JSON line of system telemetry per interval, forever, on stdout.
+
+One process for the whole desktop: quickshell's Sys singleton tails this
+instead of each module spawning its own pollers. Every field is optional --
+a missing sensor is omitted rather than reported as zero, so the HUD can
+show "--" instead of a lie.
+
+Check it by hand:   ~/.config/hypr/bin/sysbus 1
+"""
+import json, os, platform, shutil, socket, subprocess, sys, time
+
+INTERVAL = float(sys.argv[1]) if len(sys.argv) > 1 else 2.0
+NVIDIA = shutil.which("nvidia-smi")
+
+
+def hwmon(name, node="temp1_input"):
+    """Path to a named hwmon sensor, or None. Resolved once at startup:
+    hwmon numbering is stable within a boot, which is all this process lives."""
+    for d in sorted(os.listdir("/sys/class/hwmon")):
+        base = f"/sys/class/hwmon/{d}"
+        try:
+            if open(f"{base}/name").read().strip() == name:
+                if os.path.exists(f"{base}/{node}"):
+                    return f"{base}/{node}"
+        except OSError:
+            pass
+    return None
+
+
+CPU_TEMP = hwmon("coretemp") or hwmon("k10temp") or hwmon("acpitz_0")
+NVME_TEMP = hwmon("nvme")
+
+
+def read(path):
+    try:
+        return open(path).read()
+    except OSError:
+        return ""
+
+
+def cpu_times():
+    """(total, idle) jiffies. Idle includes iowait: a blocked CPU is not busy."""
+    for line in read("/proc/stat").splitlines():
+        if line.startswith("cpu "):
+            v = [int(x) for x in line.split()[1:9]]
+            return sum(v), v[3] + v[4]
+    return 0, 0
+
+
+def net_bytes():
+    """Summed rx/tx over real interfaces. lo is excluded or idle looks busy."""
+    rx = tx = 0
+    for line in read("/proc/net/dev").splitlines()[2:]:
+        name, _, rest = line.partition(":")
+        name = name.strip()
+        if name == "lo" or name.startswith(("veth", "docker", "br-")):
+            continue
+        f = rest.split()
+        if len(f) >= 9:
+            rx += int(f[0])
+            tx += int(f[8])
+    return rx, tx
+
+
+def gpu():
+    if not NVIDIA:
+        return {}
+    try:
+        out = subprocess.run(
+            [NVIDIA, "--query-gpu=utilization.gpu,temperature.gpu,memory.used,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=2).stdout.strip().splitlines()[0]
+        u, t, used, total = (int(x.strip()) for x in out.split(","))
+        return {"gpu": u, "gputemp": t,
+                "vram": round(used * 100 / total) if total else 0}
+    except Exception:
+        # A driver reload or a suspended GPU makes this fail transiently;
+        # dropping the fields beats killing the only telemetry process.
+        return {}
+
+
+def static():
+    disk = ""
+    try:
+        st = os.statvfs("/")
+        disk = round((1 - st.f_bavail / st.f_blocks) * 100)
+    except Exception:
+        pass
+    return {"host": socket.gethostname(), "kernel": platform.release(),
+            "distro": "arch", "disk": disk}
+
+
+def uptime():
+    up = float(read("/proc/uptime").split()[0] or 0)
+    h, m = int(up // 3600), int(up % 3600 // 60)
+    return f"{h//24}d{h%24:02d}h" if h >= 24 else f"{h}h{m:02d}m"
+
+
+def main():
+    prev_t, prev_i = cpu_times()
+    prev_rx, prev_tx = net_bytes()
+    prev_clock = time.monotonic()
+    base = static()
+
+    while True:
+        time.sleep(INTERVAL)
+        now = time.monotonic()
+        elapsed = max(now - prev_clock, 1e-3)
+        prev_clock = now
+
+        t, i = cpu_times()
+        dt, di = t - prev_t, i - prev_i
+        prev_t, prev_i = t, i
+
+        rx, tx = net_bytes()
+        d_rx, d_tx = rx - prev_rx, tx - prev_tx
+        prev_rx, prev_tx = rx, tx
+
+        mem = {}
+        info = {k: int(v.split()[0]) for k, v in
+                (l.split(":", 1) for l in read("/proc/meminfo").splitlines()[:5])}
+        if info.get("MemTotal"):
+            mem["mem"] = round((1 - info.get("MemAvailable", 0) / info["MemTotal"]) * 100)
+            mem["memgb"] = round(
+                (info["MemTotal"] - info.get("MemAvailable", 0)) / 1048576, 1)
+
+        out = {**base, **mem, **gpu(), "up": uptime(),
+               "cpu": round((dt - di) * 100 / dt) if dt > 0 else 0,
+               # Counters can wrap or reset when an interface flaps; a negative
+               # delta means "unknown", not "negative throughput".
+               "rx": round(max(d_rx, 0) / elapsed),
+               "tx": round(max(d_tx, 0) / elapsed)}
+
+        if CPU_TEMP:
+            v = read(CPU_TEMP).strip()
+            if v.isdigit():
+                out["cputemp"] = round(int(v) / 1000)
+        if NVME_TEMP:
+            v = read(NVME_TEMP).strip()
+            if v.isdigit():
+                out["nvmetemp"] = round(int(v) / 1000)
+
+        sys.stdout.write(json.dumps(out) + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (BrokenPipeError, KeyboardInterrupt):
+        # _exit, not return: a normal exit re-flushes stdout into the closed
+        # pipe and prints a traceback into quickshell's log.
+        os._exit(0)

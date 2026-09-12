@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""Emit one JSON line per launchable project on stdout, then exit.
+
+A project is a directory under ~/codebase (depth <= 3) holding a dev.sh. The
+script IS the manifest: its header comments carry the name, the Japanese
+label, the description, the workspace block it wants and the ports it serves.
+There is no registry, so nothing can drift out of sync with the filesystem --
+adding a project is dropping a file into it.
+
+quickshell's `dev` module runs this once per panel open and parses the lines,
+so nothing here may block: every subprocess has a timeout, and a failure drops
+its field rather than killing the record. A project with no git, no docker and
+no ports still shows up; it just reads "--", the same lie-free "no reading"
+convention sysbus uses.
+
+Check it by hand:   ~/.config/hypr/bin/devprobe | jq
+"""
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(os.environ.get("DEV_ROOT", str(Path.home() / "codebase")))
+MAXDEPTH = 3
+SKIP = {".git", "node_modules", "target", "vendor", "dist", "build", ".venv"}
+
+HEADER = re.compile(r"^#\s*(name|jp|desc|base|span|ports|compose)\s*:\s*(.*?)\s*$")
+
+
+def run(args, cwd=None, timeout=2):
+    """stdout on success, None on any failure. The distinction matters: a
+    clean `git status` and a missing git both print nothing."""
+    try:
+        p = subprocess.run(args, cwd=cwd, capture_output=True,
+                           text=True, timeout=timeout)
+    except Exception:
+        return None
+    return p.stdout.strip() if p.returncode == 0 else None
+
+
+def projects():
+    """Directories holding a dev.sh. A project never contains another one, so
+    the walk prunes as soon as it finds a script."""
+    found = []
+    if not ROOT.is_dir():
+        return found
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        rel = Path(dirpath).relative_to(ROOT)
+        dirnames[:] = [d for d in dirnames if d not in SKIP and not d.startswith(".")]
+        if len(rel.parts) >= MAXDEPTH:
+            dirnames[:] = []
+        if "dev.sh" in filenames:
+            found.append(Path(dirpath))
+            dirnames[:] = []
+    return sorted(found)
+
+
+def header(path):
+    meta = {}
+    try:
+        with open(path / "dev.sh", encoding="utf-8", errors="replace") as f:
+            for i, line in enumerate(f):
+                if i > 20:
+                    break
+                m = HEADER.match(line)
+                if m:
+                    meta[m.group(1)] = m.group(2)
+    except OSError:
+        pass
+    return meta
+
+
+def age(ts):
+    d = max(0, int(time.time()) - ts)
+    if d < 3600:
+        return str(d // 60) + "m"
+    if d < 86400:
+        return str(d // 3600) + "h"
+    return str(d // 86400) + "d"
+
+
+def git(path):
+    if not (path / ".git").exists():
+        return {}
+    g = {}
+    b = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=path)
+    if b:
+        g["branch"] = b
+    st = run(["git", "status", "--porcelain"], cwd=path)
+    if st is not None:
+        g["dirty"] = sum(1 for line in st.splitlines() if line.strip())
+    # Fails with no upstream, which is not an error -- the fields just vanish.
+    ab = run(["git", "rev-list", "--left-right", "--count", "@{u}...HEAD"], cwd=path)
+    if ab:
+        parts = ab.split()
+        if len(parts) == 2 and all(p.isdigit() for p in parts):
+            g["behind"], g["ahead"] = int(parts[0]), int(parts[1])
+    last = run(["git", "log", "-1", "--format=%ct%x1f%s"], cwd=path)
+    if last and "\x1f" in last:
+        ts, subject = last.split("\x1f", 1)
+        if ts.isdigit():
+            g["last"] = age(int(ts))
+            g["subject"] = subject
+    return g
+
+
+def docker_rows():
+    """[(compose project, container name)] for running containers, or None if
+    docker is absent or down. None renders as "--", zero renders as 0."""
+    out = run(["docker", "ps", "--format",
+               '{{.Label "com.docker.compose.project"}}\x1f{{.Names}}'], timeout=3)
+    if out is None:
+        return None
+    rows = []
+    for line in out.splitlines():
+        proj, _, name = line.partition("\x1f")
+        rows.append((proj.strip(), name.strip()))
+    return rows
+
+
+def listening():
+    """Set of locally listening TCP ports. Used only to answer "is the port
+    this project declared actually up", never to guess which port is whose."""
+    out = run(["ss", "-ltnH"])
+    ports = set()
+    if not out:
+        return ports
+    for line in out.splitlines():
+        f = line.split()
+        if len(f) >= 4:
+            p = f[3].rsplit(":", 1)[-1]
+            if p.isdigit():
+                ports.add(int(p))
+    return ports
+
+
+def sigil(path):
+    """A 5x5 mirrored bit grid derived from the project's absolute path.
+    Deterministic: the mark never changes unless the project moves. Mirrored
+    because an asymmetric hash reads as noise and a symmetric one reads as a
+    mark."""
+    bits = int.from_bytes(hashlib.md5(str(path).encode()).digest()[:4], "big")
+    rows = []
+    for r in range(5):
+        half = [(bits >> (r * 3 + c)) & 1 for c in range(3)]
+        rows.append("".join(str(b) for b in half + half[1::-1]))
+    return rows
+
+
+def intof(s, fallback):
+    return int(s) if s.isdigit() else fallback
+
+
+def main():
+    open_ports = listening()
+    dock = docker_rows()
+
+    for path in projects():
+        meta = header(path)
+        key = path.name
+        rec = {
+            "key": key,
+            "name": meta.get("name") or key.upper(),
+            "jp": meta.get("jp", ""),
+            "desc": meta.get("desc", ""),
+            "path": str(path),
+            "base": intof(meta.get("base", ""), 1),
+            "span": max(1, intof(meta.get("span", ""), 1)),
+            "sigil": sigil(path),
+        }
+        rec.update(git(path))
+
+        want = [int(p) for p in meta.get("ports", "").split() if p.isdigit()]
+        if want:
+            rec["ports"] = [{"port": p, "open": p in open_ports} for p in want]
+
+        if dock is not None:
+            # HONEST LIMIT: docker does not know which project a container
+            # belongs to. This matches on the compose project label, falling
+            # back to a substring of the container name -- right for a
+            # compose stack, a guess for a hand-run container.
+            cp = meta.get("compose") or key
+            rec["containers"] = sum(1 for proj, name in dock
+                                    if (proj and proj == cp) or cp in name or key in name)
+
+        # Compact: this is a line protocol, and the module's selftest
+        # greps it as text.
+        sys.stdout.write(json.dumps(rec, ensure_ascii=False,
+                                    separators=(",", ":")) + "\n")
+    sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (BrokenPipeError, KeyboardInterrupt):
+        os._exit(0)
