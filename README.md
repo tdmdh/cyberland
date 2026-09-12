@@ -4,7 +4,12 @@ A Hyprland desktop built around [Quickshell](https://quickshell.org). No Waybar,
 no rofi, no swaync: every surface you see is one QML shell that reads a palette
 regenerated from the wallpaper.
 
-<!-- screenshots: drop 2-3 here -->
+[Watch the full showcase video](https://portfolio-five-jade-37.vercel.app/cyberland)
+
+| | | |
+|---|---|---|
+| ![Lock screen](docs/screenshots/lockscreen.jpg) | ![Control panel](docs/screenshots/control-panel.jpg) | ![Schematic vector studio](docs/screenshots/schematic-studio.jpg) |
+| Lock screen | Control panel | Schematic vector studio |
 
 ## What is in here
 
