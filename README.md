@@ -125,8 +125,3 @@ hyprctl reload
 - `bin/devprobe` scans `~/codebase` for projects. Point `DEV_ROOT` elsewhere if
   your projects live somewhere else.
 - The schematic studio needs [bun](https://bun.sh). Everything else works without it.
-
-## Credits
-
-Animation curves are from [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland).
-The keybind layout started from [JaKooLit](https://github.com/JaKooLit)'s defaults.
