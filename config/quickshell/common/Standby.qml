@@ -115,9 +115,9 @@ Item {
             text: Qt.formatDateTime(ro.now, "HH:mm")
             color: Theme.text
             font.family: Theme.fontDisplay
-            font.pixelSize: 154
+            font.pixelSize: Theme.szDisplay
             font.weight: Font.Light
-            font.letterSpacing: -4.0
+            font.letterSpacing: Theme.trkDisplay
         }
 
         Row {
@@ -129,15 +129,15 @@ Item {
                 text: Qt.formatDateTime(ro.now, "dddd dd MMMM").toUpperCase()
                 color: Theme.dim
                 font.family: Theme.fontDisplay
-                font.pixelSize: 15
-                font.letterSpacing: 4
+                font.pixelSize: Theme.szValue
+                font.letterSpacing: Theme.trkWide
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "日付"
-                color: Theme.line
+                color: Theme.dim
                 font.family: Theme.fontJP
-                font.pixelSize: 12
+                font.pixelSize: Theme.szBody
             }
         }
 
@@ -151,7 +151,7 @@ Item {
                 jp: "宿主"
                 value: Sys.host || "--"
                 subValue: "SYSTEM"
-                tint: Theme.laser
+                tint: Theme.accent
             }
             DynamicPill {
                 label: "UPTIME"
@@ -166,7 +166,7 @@ Item {
                 visible: ro.showWork
                 value: Sys.cpu < 0 ? "--" : Sys.cpu + "%"
                 subValue: "LOAD"
-                tint: Sys.cpu >= 80 ? Theme.alert : (Sys.cpu >= 60 ? Theme.warn : Theme.laser)
+                tint: Sys.cpu >= 80 ? Theme.alert : (Sys.cpu >= 60 ? Theme.warn : Theme.accent)
             }
             DynamicPill {
                 label: "MEM"
@@ -174,7 +174,7 @@ Item {
                 visible: ro.showWork
                 value: Sys.mem < 0 ? "--" : Sys.mem + "%"
                 subValue: "RAM"
-                tint: Sys.mem >= 80 ? Theme.alert : Theme.laser
+                tint: Sys.mem >= 80 ? Theme.alert : Theme.accent
             }
             DynamicPill {
                 label: "TEMP"
@@ -182,7 +182,7 @@ Item {
                 visible: ro.showWork
                 value: Sys.temp < 0 ? "--" : Sys.temp + "°"
                 subValue: "THERMAL"
-                tint: Sys.temp >= 75 ? Theme.alert : Theme.laser
+                tint: Sys.temp >= 75 ? Theme.alert : Theme.accent
             }
         }
 
@@ -193,16 +193,16 @@ Item {
             width: 420
             height: 48
             radius: 0
-            color: Theme.glassCard
+            color: Theme.card
             border.width: 1
-            border.color: ro.failed ? Theme.alert : (field.activeFocus ? Theme.accent : Theme.glassBorder)
+            border.color: ro.failed ? Theme.alert : (field.activeFocus ? Theme.accent : Theme.edge)
 
             // Top specular catch
             Rectangle {
                 anchors { top: parent.top; left: parent.left; right: parent.right }
                 anchors.leftMargin: 1; anchors.rightMargin: 1
                 height: 1
-                color: Theme.specularDim
+                color: Theme.accentWash
             }
 
             // Dots, not a text cursor: the field reads as a lock and the
@@ -223,8 +223,8 @@ Item {
                 text: "PASSWORD  合言葉"
                 color: Theme.dim
                 font.family: Theme.fontDisplay
-                font.pixelSize: 12
-                font.letterSpacing: 3
+                font.pixelSize: Theme.szBody
+                font.letterSpacing: Theme.trkWide
             }
 
             // Invisible: the field above is drawn by hand, this only collects
@@ -256,8 +256,8 @@ Item {
             text: ro.note
             color: ro.failed ? Theme.alert : Theme.dim
             font.family: Theme.fontDisplay
-            font.pixelSize: 11
-            font.letterSpacing: 2
+            font.pixelSize: Theme.szBody
+            font.letterSpacing: Theme.trkLabel
         }
     }
 
@@ -285,15 +285,15 @@ Item {
             text: ro.state1
             color: Theme.dim
             font.family: Theme.fontDisplay
-            font.pixelSize: 13
-            font.letterSpacing: 6
+            font.pixelSize: Theme.szBody
+            font.letterSpacing: Theme.trkWide
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: ro.jp1
-            color: Theme.line
+            color: Theme.dim
             font.family: Theme.fontJP
-            font.pixelSize: 11
+            font.pixelSize: Theme.szBody
         }
     }
 

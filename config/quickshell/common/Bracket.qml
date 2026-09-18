@@ -9,7 +9,7 @@ Item {
     property string corner: "tl"
     property int    arm: 18
     property int    thickness: 1
-    property color  stroke: Theme.laser
+    property color  stroke: Theme.accent
     property bool   reticle: true
 
     readonly property bool isRight:  br.corner === "tr" || br.corner === "br"

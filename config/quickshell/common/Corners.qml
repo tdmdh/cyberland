@@ -9,7 +9,7 @@ import "."
 Item {
     id: c
 
-    property color stroke: Theme.laser
+    property color stroke: Theme.accent
     property int   arm: 18
     property int   thickness: 1
 

@@ -12,7 +12,7 @@ Item {
     property string subValue: ""
     property bool   alert: false
     property bool   warn: false
-    property color  tint: root.alert ? Theme.alert : (root.warn ? Theme.warn : Theme.laser)
+    property color  tint: root.alert ? Theme.alert : (root.warn ? Theme.warn : Theme.accent)
     property bool   expandable: true
     property bool   expanded: false
 
@@ -28,8 +28,8 @@ Item {
     scale: mouseArea.pressed ? 0.965 : (isHovered ? 1.015 : 1.0)
     Behavior on scale {
         NumberAnimation {
-            duration: mouseArea.pressed ? Theme.tapSnapMs : 160
-            easing.type: mouseArea.pressed ? Easing.OutQuad : Easing.OutBack
+            duration: mouseArea.pressed ? Theme.tapSnapMs : Theme.easeMs
+            easing.type: mouseArea.pressed ? Easing.OutQuad : Easing.OutCubic
         }
     }
 
@@ -44,19 +44,19 @@ Item {
 
         color: root.alert
                ? Qt.rgba(Theme.alert.r, Theme.alert.g, Theme.alert.b, 0.22)
-               : (root.isHovered ? Theme.glassElevated : Theme.glassCard)
+               : (root.isHovered ? Theme.cardHover : Theme.card)
         border.width: 1
-        border.color: root.alert ? Theme.alert : (root.isHovered ? Theme.specularCatch : Theme.glassBorder)
+        border.color: root.alert ? Theme.alert : (root.isHovered ? Theme.accentEdge : Theme.edge)
 
         // Apple Fluid Spring Behavior (Damping: 1.0, Response: 0.32s)
         Behavior on width {
-            NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutCubic }
         }
         Behavior on color {
-            ColorAnimation { duration: 120 }
+            ColorAnimation { duration: Theme.easeFastMs }
         }
         Behavior on border.color {
-            ColorAnimation { duration: 120 }
+            ColorAnimation { duration: Theme.easeFastMs }
         }
 
         // Top edge specular photon refraction catch
@@ -97,27 +97,27 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.label
-                    color: Theme.textSecondary
+                    color: Theme.dim
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szMicro
                     font.weight: Font.Bold
-                    font.letterSpacing: 1.2
+                    font.letterSpacing: Theme.trkLabel
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.jp !== "" && !root.isExpanded
                     text: root.jp
-                    color: Theme.laser
+                    color: Theme.accent
                     opacity: Theme.opacityJP
                     font.family: Theme.fontJP
-                    font.pixelSize: Theme.szNano
+                    font.pixelSize: Theme.szMicro
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.value
-                    color: Theme.textPrimary
+                    color: Theme.text
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.szValue
                     font.weight: Font.DemiBold
@@ -133,14 +133,14 @@ Item {
                 spacing: 6
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 160 }
+                    NumberAnimation { duration: Theme.easeMs }
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.subValue !== ""
                     text: "•"
-                    color: Theme.textTertiary
+                    color: Theme.faint
                     font.pixelSize: Theme.szMicro
                 }
 
@@ -148,9 +148,9 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.subValue !== ""
                     text: root.subValue
-                    color: Theme.textSecondary
+                    color: Theme.dim
                     font.family: Theme.fontMono
-                    font.pixelSize: Theme.szTail
+                    font.pixelSize: Theme.szMicro
                 }
             }
         }

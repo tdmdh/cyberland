@@ -10,7 +10,7 @@ Item {
     readonly property string panelTitle: "AGENTS"
     readonly property string panelJp: "代理"
     readonly property string panelHint: "ESC CLOSE"
-    readonly property int panelWidth: 1080
+    readonly property int panelWidth: Theme.panelM
     readonly property int panelHeight: 580
     readonly property string placement: "center"
 
@@ -117,7 +117,7 @@ Item {
                 jp: "文脈"
                 value: view.tok(Math.max(0, ...view.sessions.map(x => x.ctx || 0)))
                 subValue: "TOKEN WINDOW"
-                tint: Theme.laser
+                tint: Theme.accent
             }
             DynamicPill {
                 label: "ERRORS"
@@ -144,8 +144,8 @@ Item {
             text: "NOTHING ON THE BUS  ·  START AN AGENT SESSION, OR PIPE ANOTHER CLI THROUGH AGENTBUS-PIPE"
             color: Theme.dim
             font.family: Theme.fontDisplay
-            font.pixelSize: 11
-            font.letterSpacing: 1.6
+            font.pixelSize: Theme.szBody
+            font.letterSpacing: Theme.trkLabel
             wrapMode: Text.WordWrap
         }
 
@@ -177,15 +177,15 @@ Item {
                         text: lane.modelData.cli.toUpperCase()
                         color: Theme.text
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 13
-                        font.letterSpacing: 3
+                        font.pixelSize: Theme.szBody
+                        font.letterSpacing: Theme.trkWide
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: lane.modelData.proj ? "· " + lane.modelData.proj : ""
                         color: Theme.dim
                         font.family: Theme.fontMono
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.szBody
                     }
                     Item { height: 1; width: Math.max(10, parent.width - 470) }
                     Text {
@@ -193,22 +193,22 @@ Item {
                         text: lane.modelData.errs > 0 ? lane.modelData.errs + " ERR" : ""
                         color: Theme.accent2
                         font.family: Theme.fontMono
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.szBody
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: lane.modelData.ctx > 0 ? view.fmtNum(lane.modelData.ctx) + " ctx" : ""
                         color: Theme.dim
                         font.family: Theme.fontMono
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.szBody
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: lane.modelData.state
                         color: view.stateColor(lane.modelData)
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 11
-                        font.letterSpacing: 2
+                        font.pixelSize: Theme.szBody
+                        font.letterSpacing: Theme.trkLabel
                     }
                 }
 
@@ -223,7 +223,7 @@ Item {
                     }
                     color: view.stateColor(lane.modelData)
                     font.family: Theme.fontMono
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.szBody
                     elide: Text.ElideRight
                     maximumLineCount: 1
                 }
@@ -245,7 +245,7 @@ Item {
                                 text: modelData.tool
                                 color: modelData.err ? Theme.accent2 : Theme.accent
                                 font.family: Theme.fontMono
-                                font.pixelSize: 12
+                                font.pixelSize: Theme.szBody
                                 elide: Text.ElideRight
                             }
                             Text {
@@ -253,7 +253,7 @@ Item {
                                 text: modelData.arg || ""
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 12
+                                font.pixelSize: Theme.szBody
                                 elide: Text.ElideRight
                             }
                             Text {
@@ -261,7 +261,7 @@ Item {
                                 text: view.fmtMs(modelData.ms)
                                 color: Theme.dim
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                                 horizontalAlignment: Text.AlignRight
                             }
                         }

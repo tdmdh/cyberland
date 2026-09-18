@@ -15,7 +15,7 @@ Item {
        : (view.selLive
           ? "↑ ↓ / 1-9 SELECT  •  [ENTER] FOCUS WS  •  [⇧ENTER] PURGE SHARD  •  [T] TTY  •  [ESC] CLOSE"
           : "↑ ↓ / 1-9 SELECT  •  [ENTER] INJECT SHARD  •  [T] TTY  •  [ESC] CLOSE")
-    readonly property int panelWidth: 1120
+    readonly property int panelWidth: Theme.panelM
     readonly property int panelHeight: 720
     readonly property string placement: "center"
 
@@ -219,7 +219,7 @@ Item {
                 jp: "媒体"
                 value: ("0" + view.projects.length).slice(-2)
                 subValue: "PROJECTS"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             DynamicPill {
@@ -391,18 +391,18 @@ Item {
                                         ? Theme.alert
                                         : (ListView.isCurrentItem ? Theme.accent : Theme.text)
                                     font.family: Theme.fontDisplay
-                                    font.pixelSize: 16
+                                    font.pixelSize: Theme.szValue
                                     font.capitalization: Font.AllUppercase
-                                    font.letterSpacing: 2
+                                    font.letterSpacing: Theme.trkLabel
                                     font.weight: Font.DemiBold
                                 }
 
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: modelData.jp
-                                    color: Theme.line
+                                    color: Theme.dim
                                     font.family: Theme.fontJP
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.szMicro
                                 }
                             }
 
@@ -526,12 +526,12 @@ Item {
                     color: Theme.dim
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szLead
-                    font.letterSpacing: 4
+                    font.letterSpacing: Theme.trkWide
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "Add a dev.sh manifest under ~/codebase to register a project"
-                    color: Theme.line
+                    color: Theme.dim
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.szBody
                 }
@@ -561,7 +561,7 @@ Item {
                                 color: Theme.dim
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.szMicro
-                                font.letterSpacing: 1.5
+                                font.letterSpacing: Theme.trkLabel
                                 font.weight: Font.Bold
                             }
                             Text {
@@ -571,15 +571,15 @@ Item {
                                 font.family: Theme.fontDisplay
                                 font.pixelSize: Theme.szLead
                                 font.capitalization: Font.AllUppercase
-                                font.letterSpacing: 3
+                                font.letterSpacing: Theme.trkWide
                                 font.weight: Font.Bold
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: view.sel ? view.sel.jp : ""
-                                color: Theme.line
+                                color: Theme.dim
                                 font.family: Theme.fontJP
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.szBody
                             }
                         }
 
@@ -644,7 +644,7 @@ Item {
                                 color: view.isArmed ? Theme.onAccent : (view.selLive ? Theme.accent : Theme.dim)
                                 font.family: Theme.fontDisplay
                                 font.pixelSize: Theme.szBody
-                                font.letterSpacing: 2
+                                font.letterSpacing: Theme.trkLabel
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -670,7 +670,7 @@ Item {
                             color: Theme.dim
                             font.family: Theme.fontMono
                             font.pixelSize: Theme.szMicro
-                            font.letterSpacing: 1.2
+                            font.letterSpacing: Theme.trkLabel
                         }
 
                         Text {
@@ -678,7 +678,7 @@ Item {
                             color: Theme.text
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szBody
-                            font.letterSpacing: 1.4
+                            font.letterSpacing: Theme.trkLabel
                             elide: Text.ElideRight
                             width: parent.parent.width - 140
                         }
@@ -824,7 +824,7 @@ Item {
                             color: Theme.dim
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szMicro
-                            font.letterSpacing: 1.5
+                            font.letterSpacing: Theme.trkLabel
                         }
 
                         Text {
@@ -858,7 +858,7 @@ Item {
                             color: Theme.accent
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szMicro
-                            font.letterSpacing: 1.5
+                            font.letterSpacing: Theme.trkLabel
                         }
 
                         Text {
@@ -897,7 +897,7 @@ Item {
                                 color: Theme.onAccent
                                 font.family: Theme.fontDisplay
                                 font.pixelSize: Theme.szBody
-                                font.letterSpacing: 2
+                                font.letterSpacing: Theme.trkLabel
                                 font.weight: Font.Bold
                             }
 

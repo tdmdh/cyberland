@@ -11,7 +11,7 @@ Item {
     readonly property string panelTitle: "MUSIC DECK"
     readonly property string panelJp: "音響"
     readonly property string panelHint: "SPACE PLAY/PAUSE  •  ←/→ SKIP  •  ↑/↓ VOL  •  S SHUFFLE  •  L LOOP  •  ESC CLOSE"
-    readonly property int panelWidth: 920
+    readonly property int panelWidth: Theme.panelS
     readonly property int panelHeight: 330
     readonly property string placement: "center"
 
@@ -119,14 +119,14 @@ Item {
                 jp: "状態"
                 value: view.isPlaying ? "PLAYING" : (view.hasPlayer ? "PAUSED" : "IDLE")
                 subValue: view.hasPlayer ? (view.trackArtist ? view.trackArtist : "AUDIO") : "STANDBY"
-                tint: view.isPlaying ? Theme.neonGreen : (view.hasPlayer ? Theme.neonYellow : Theme.dim)
+                tint: view.isPlaying ? Theme.accent : (view.hasPlayer ? Theme.warn : Theme.dim)
             }
             DynamicPill {
                 label: "SOURCE"
                 jp: "音源"
                 value: view.hasPlayer ? (view.player.identity ? view.player.identity.toUpperCase() : "MPRIS") : "NONE"
                 subValue: view.hasPlayer ? "48kHz STEREO" : "NO STREAM"
-                tint: Theme.laser
+                tint: Theme.accent
             }
         }
     }
@@ -141,12 +141,12 @@ Item {
             width: 160
             height: 160
             cut: 8
-            strokeColor: view.isPlaying ? Theme.neonCyan : Theme.line
+            strokeColor: view.isPlaying ? Theme.accent : Theme.line
             strokeWidth: 1
             fillColor: Theme.layer2
             reticles: true
             notch: true
-            notchColor: view.isPlaying ? Theme.neonGreen : Theme.line
+            notchColor: view.isPlaying ? Theme.accent : Theme.line
 
             Image {
                 id: albumArt
@@ -178,16 +178,16 @@ Item {
                         anchors.top: parent.top; anchors.topMargin: 8
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: parent.width - 16; height: 22
-                        color: Qt.rgba(Theme.neonMagenta.r, Theme.neonMagenta.g, Theme.neonMagenta.b, 0.12)
+                        color: Qt.rgba(Theme.accent2.r, Theme.accent2.g, Theme.accent2.b, 0.12)
                         border.color: Theme.line
 
                         Text {
                             anchors.centerIn: parent
                             text: "D-TAPE // HI-FI"
-                            color: Theme.neonCyan
+                            color: Theme.accent
                             font.family: Theme.fontDisplay
-                            font.pixelSize: 8
-                            font.letterSpacing: 1.5
+                            font.pixelSize: Theme.szMicro
+                            font.letterSpacing: Theme.trkLabel
                             font.weight: Font.Bold
                         }
                     }
@@ -201,7 +201,7 @@ Item {
                             width: 36; height: 36; radius: 18
                             color: Theme.bg
                             border.width: 2
-                            border.color: view.isPlaying ? Theme.neonCyan : Theme.line
+                            border.color: view.isPlaying ? Theme.accent : Theme.line
 
                             Item {
                                 anchors.fill: parent
@@ -210,9 +210,9 @@ Item {
                                     loops: Animation.Infinite
                                     running: view.isPlaying
                                 }
-                                Rectangle { width: 2; height: parent.height; color: Theme.neonCyan; anchors.centerIn: parent; opacity: 0.8 }
-                                Rectangle { width: parent.width; height: 2; color: Theme.neonCyan; anchors.centerIn: parent; opacity: 0.8 }
-                                Rectangle { width: 10; height: 10; radius: 5; color: Theme.bg; border.color: Theme.neonCyan; anchors.centerIn: parent }
+                                Rectangle { width: 2; height: parent.height; color: Theme.accent; anchors.centerIn: parent; opacity: 0.8 }
+                                Rectangle { width: parent.width; height: 2; color: Theme.accent; anchors.centerIn: parent; opacity: 0.8 }
+                                Rectangle { width: 10; height: 10; radius: 5; color: Theme.bg; border.color: Theme.accent; anchors.centerIn: parent }
                             }
                         }
 
@@ -220,7 +220,7 @@ Item {
                             width: 36; height: 36; radius: 18
                             color: Theme.bg
                             border.width: 2
-                            border.color: view.isPlaying ? Theme.neonMagenta : Theme.line
+                            border.color: view.isPlaying ? Theme.accent2 : Theme.line
 
                             Item {
                                 anchors.fill: parent
@@ -229,9 +229,9 @@ Item {
                                     loops: Animation.Infinite
                                     running: view.isPlaying
                                 }
-                                Rectangle { width: 2; height: parent.height; color: Theme.neonMagenta; anchors.centerIn: parent; opacity: 0.8 }
-                                Rectangle { width: parent.width; height: 2; color: Theme.neonMagenta; anchors.centerIn: parent; opacity: 0.8 }
-                                Rectangle { width: 10; height: 10; radius: 5; color: Theme.bg; border.color: Theme.neonMagenta; anchors.centerIn: parent }
+                                Rectangle { width: 2; height: parent.height; color: Theme.accent2; anchors.centerIn: parent; opacity: 0.8 }
+                                Rectangle { width: parent.width; height: 2; color: Theme.accent2; anchors.centerIn: parent; opacity: 0.8 }
+                                Rectangle { width: 10; height: 10; radius: 5; color: Theme.bg; border.color: Theme.accent2; anchors.centerIn: parent }
                             }
                         }
                     }
@@ -246,7 +246,7 @@ Item {
                 width: miniStatus.implicitWidth + 10
                 height: 16
                 color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.85)
-                border.color: view.isPlaying ? Theme.neonCyan : Theme.line2
+                border.color: view.isPlaying ? Theme.accent : Theme.line2
 
                 Row {
                     id: miniStatus
@@ -255,14 +255,14 @@ Item {
                     Rectangle {
                         width: 5; height: 5; radius: 0
                         anchors.verticalCenter: parent.verticalCenter
-                        color: view.isPlaying ? Theme.neonGreen : Theme.dim
+                        color: view.isPlaying ? Theme.accent : Theme.dim
                     }
                     Text {
                         text: view.isPlaying ? "LIVE" : "IDLE"
-                        color: view.isPlaying ? Theme.neonGreen : Theme.dim
+                        color: view.isPlaying ? Theme.accent : Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 8
-                        font.letterSpacing: 1
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Bold
                     }
                 }
@@ -290,10 +290,10 @@ Item {
                         text: view.hasPlayer
                               ? ("// " + (view.player.identity ? view.player.identity.toUpperCase() : "MPRIS") + " //")
                               : "// STANDBY //"
-                        color: view.isPlaying ? Theme.neonCyan : Theme.dim
+                        color: view.isPlaying ? Theme.accent : Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 10
-                        font.letterSpacing: 1.5
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Bold
                     }
 
@@ -303,7 +303,7 @@ Item {
                             required property var modelData
                             text: (modelData.identity || "PLAYER").toUpperCase() + (modelData.isPlaying ? " ●" : "")
                             active: view.player === modelData
-                            tint: modelData.isPlaying ? Theme.neonGreen : Theme.neonCyan
+                            tint: modelData.isPlaying ? Theme.accent : Theme.accent
                             implicitHeight: 20
                             onClicked: view.selectedPlayer = modelData
                         }
@@ -314,9 +314,9 @@ Item {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: view.hasPlayer ? "STEREO • 48kHz" : "AUDIO BUS READY"
-                    color: Theme.line
+                    color: Theme.dim
                     font.family: Theme.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.szMicro
                 }
             }
 
@@ -332,8 +332,8 @@ Item {
                     jp: view.trackArtist !== "" ? view.trackArtist : "待機"
                     color: Theme.text
                     jpColor: Theme.dim
-                    pixelSize: 17
-                    letterSpacing: 2
+                    pixelSize: Theme.szValue
+                    letterSpacing: Theme.trkLabel
                     weight: Font.Bold
                 }
 
@@ -342,24 +342,24 @@ Item {
                     spacing: 8
                     Text {
                         text: view.trackArtist !== "" ? view.trackArtist : "System Idle"
-                        color: Theme.neonCyan
+                        color: Theme.accent
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 12
-                        font.letterSpacing: 1.4
+                        font.pixelSize: Theme.szBody
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Medium
                     }
                     Text {
                         visible: view.trackAlbum !== ""
                         text: "•"
                         color: Theme.dim
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.szMicro
                     }
                     Text {
                         visible: view.trackAlbum !== ""
                         text: view.trackAlbum
                         color: Theme.dim
                         font.family: Theme.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.szBody
                         elide: Text.ElideRight
                         width: parent.width - 200
                     }
@@ -427,7 +427,7 @@ Item {
                                 height: Math.max(2, (specRow.levels[index] || 0.05) * parent.height)
                                 radius: 0
                                 color: index < 7 ? Theme.accent
-                                     : (index < 14 ? Theme.laser : Theme.accent2)
+                                     : (index < 14 ? Theme.accent : Theme.accent2)
                                 opacity: 0.85
                             }
 
@@ -437,7 +437,7 @@ Item {
                                 width: parent.width
                                 height: 1.5
                                 radius: 0
-                                color: Theme.amber
+                                color: Theme.warn
                                 opacity: 0.95
                             }
                         }
@@ -457,7 +457,7 @@ Item {
                     text: view.formatTime(view.currentPos)
                     color: Theme.accent
                     font.family: Theme.fontMono
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.szBody
                     font.weight: Font.Bold
                 }
 
@@ -474,9 +474,9 @@ Item {
                         width: parent.width
                         height: 5
                         radius: 0
-                        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.7)
+                        color: Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.7)
                         border.width: 1
-                        border.color: Theme.glassBorder
+                        border.color: Theme.edge
 
                         Rectangle {
                             anchors.left: parent.left
@@ -534,9 +534,9 @@ Item {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: view.formatTime(view.trackLength)
-                    color: Theme.textSecondary
+                    color: Theme.dim
                     font.family: Theme.fontMono
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.szBody
                 }
             }
 
@@ -617,7 +617,7 @@ Item {
                         text: view.player ? Math.round(view.player.volume * 100) + "%" : "--"
                         color: Theme.text
                         font.family: Theme.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.szBody
                     }
                 }
             }

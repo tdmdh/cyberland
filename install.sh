@@ -60,6 +60,7 @@ PKGS_DESKTOP=(
     brightnessctl playerctl power-profiles-daemon
     grim slurp swappy grimblast-git hyprpicker
     btop cava fastfetch jq python python-psutil libnotify
+    fd libqalculate go
     ttf-cascadia-code-nerd noto-fonts noto-fonts-emoji noto-fonts-cjk
 )
 PKGS_DEV=(zsh neovim starship fzf zoxide lsd lazygit git)
@@ -178,6 +179,16 @@ if command -v bun >/dev/null; then
     (cd "$dest" && bun install --silent) || warn "bun install failed, the schematic studio will not render"
 else
     warn "bun not found, skipping the schematic engine (Super+X)"
+fi
+
+# The launcher's file search is a small Go indexer. Without it the launcher
+# still works, just with no Files results.
+if command -v go >/dev/null; then
+    say "building the launcher's file indexer"
+    (cd "$REPO/config/hypr/src/fileindex" && go build -o ../../bin/fileindex) \
+        || warn "go build failed, the launcher will not search files"
+else
+    warn "go not found, the launcher will not search files"
 fi
 
 mkdir -p "$HOME/Pictures/wallpapers"

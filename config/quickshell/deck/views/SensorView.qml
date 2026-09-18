@@ -10,9 +10,10 @@ Item {
     readonly property string panelTitle: "SENSORS"
     readonly property string panelJp: "計装"
     readonly property string panelHint: "R  REFRESH TELEMETRY  •  ESC  CLOSE"
-    readonly property int panelWidth: 1060
-    readonly property int panelHeight: 620
-    readonly property string placement: "top"
+    readonly property int panelWidth: Theme.panelM
+    readonly property int panelHeight: -1          // fit content; see deck targetH
+    implicitHeight: contentCol.implicitHeight
+    readonly property string placement: "center"
 
     signal closeRequested()
 
@@ -76,7 +77,7 @@ Item {
     function tempColor(t: int): color {
         if (t >= 80) return Theme.alert;
         if (t >= 65) return Theme.warn;
-        return Theme.neonCyan;
+        return Theme.accent;
     }
 
     function coreFreq(idx: int): string {
@@ -110,7 +111,7 @@ Item {
                 jp: "画像記憶"
                 value: view.telemetryData.gpu ? Math.round(view.telemetryData.gpu.mem_used * 100 / view.telemetryData.gpu.mem_total) + "%" : "--"
                 subValue: view.telemetryData.gpu ? (view.telemetryData.gpu.mem_used / 1024).toFixed(1) + "G USED" : "VRAM"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             Btn {
@@ -145,16 +146,16 @@ Item {
                     text: "// GPU AVIONICS //"
                     color: Theme.dim
                     font.family: Theme.fontDisplay
-                    font.pixelSize: 11
-                    font.letterSpacing: 1.5
+                    font.pixelSize: Theme.szBody
+                    font.letterSpacing: Theme.trkLabel
                     font.weight: Font.Bold
                 }
                 Text {
                     text: (view.telemetryData.gpu ? view.telemetryData.gpu.name : "NVIDIA GPU").toUpperCase()
-                    color: Theme.neonMagenta
+                    color: Theme.accent2
                     font.family: Theme.fontDisplay
-                    font.pixelSize: 11
-                    font.letterSpacing: 2.0
+                    font.pixelSize: Theme.szBody
+                    font.letterSpacing: Theme.trkLabel
                     font.weight: Font.Bold
                 }
             }
@@ -163,9 +164,9 @@ Item {
                 width: parent.width
                 height: 104
                 radius: 0
-                color: Theme.glassCard
+                color: Theme.card
                 border.width: 1
-                border.color: Theme.glassBorder
+                border.color: Theme.edge
                 clip: true
 
                 // Top specular catch
@@ -175,7 +176,7 @@ Item {
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 0.5; color: Theme.specularCatch }
+                        GradientStop { position: 0.5; color: Theme.accentEdge }
                         GradientStop { position: 1.0; color: "transparent" }
                     }
                 }
@@ -195,14 +196,14 @@ Item {
                                 segs: 16
                                 segWidth: 6
                                 segHeight: 12
-                                barColor: Theme.neonCyan
+                                barColor: Theme.accent
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (view.telemetryData.gpu ? view.telemetryData.gpu.util : 0) + "%"
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 15
+                                font.pixelSize: Theme.szValue
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -219,14 +220,14 @@ Item {
                                 segs: 16
                                 segWidth: 6
                                 segHeight: 12
-                                barColor: Theme.neonMagenta
+                                barColor: Theme.accent2
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (view.telemetryData.gpu ? (view.telemetryData.gpu.mem_used / 1024).toFixed(1) : 0) + " / " + (view.telemetryData.gpu ? (view.telemetryData.gpu.mem_total / 1024).toFixed(0) : 0) + " GB"
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 14
+                                font.pixelSize: Theme.szValue
                             }
                         }
                     }
@@ -266,16 +267,16 @@ Item {
                     text: "// CPU CORE THERMAL MATRIX //"
                     color: Theme.dim
                     font.family: Theme.fontDisplay
-                    font.pixelSize: 11
-                    font.letterSpacing: 1.5
+                    font.pixelSize: Theme.szBody
+                    font.letterSpacing: Theme.trkLabel
                     font.weight: Font.Bold
                 }
                 Text {
                     text: "PACKAGE: " + (view.telemetryData.cpu_pkg_temp ? view.telemetryData.cpu_pkg_temp + "°C" : "--")
                     color: view.tempColor(view.telemetryData.cpu_pkg_temp || 0)
                     font.family: Theme.fontMono
-                    font.pixelSize: 11
-                    font.letterSpacing: 1.2
+                    font.pixelSize: Theme.szBody
+                    font.letterSpacing: Theme.trkLabel
                 }
             }
 
@@ -283,7 +284,10 @@ Item {
             Grid {
                 id: coreGrid
                 width: parent.width
-                columns: 5
+                // Fewest rows of at most 7, then spread evenly: 14 cores -> 7x2,
+                // not 5+5+4.
+                readonly property int n: (view.telemetryData.core_temps || []).length
+                columns: n > 0 ? Math.ceil(n / Math.ceil(n / 7)) : 1
                 spacing: 8
 
                 Repeater {
@@ -293,19 +297,19 @@ Item {
                         required property var modelData
                         required property int index
 
-                        width: (coreGrid.width - 4 * 8) / 5
+                        width: (coreGrid.width - (coreGrid.columns - 1) * 8) / coreGrid.columns
                         height: 48
                         radius: 0
-                        color: Theme.glassCard
+                        color: Theme.card
                         border.width: 1
-                        border.color: Theme.glassBorder
+                        border.color: Theme.edge
 
                         // Top specular catch
                         Rectangle {
                             anchors { top: parent.top; left: parent.left; right: parent.right }
                             anchors.leftMargin: 1; anchors.rightMargin: 1
                             height: 1
-                            color: Theme.specularDim
+                            color: Theme.accentWash
                         }
 
                         Row {
@@ -318,14 +322,14 @@ Item {
                                     text: modelData.label.toUpperCase()
                                     color: Theme.dim
                                     font.family: Theme.fontDisplay
-                                    font.pixelSize: 9
-                                    font.letterSpacing: 1.2
+                                    font.pixelSize: Theme.szMicro
+                                    font.letterSpacing: Theme.trkLabel
                                 }
                                 Text {
                                     text: view.coreFreq(index)
-                                    color: Theme.line
+                                    color: Theme.dim
                                     font.family: Theme.fontMono
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.szMicro
                                 }
                             }
 
@@ -334,7 +338,7 @@ Item {
                                 text: modelData.temp + "°C"
                                 color: view.tempColor(modelData.temp)
                                 font.family: Theme.fontMono
-                                font.pixelSize: 14
+                                font.pixelSize: Theme.szValue
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -349,8 +353,8 @@ Item {
                     text: "// STORAGE, RAM & BUS THERMALS //"
                     color: Theme.dim
                     font.family: Theme.fontDisplay
-                    font.pixelSize: 11
-                    font.letterSpacing: 1.5
+                    font.pixelSize: Theme.szBody
+                    font.letterSpacing: Theme.trkLabel
                     font.weight: Font.Bold
                 }
             }
@@ -364,15 +368,15 @@ Item {
                     width: (parent.width - 24) / 3
                     height: 72
                     radius: 0
-                    color: Theme.glassCard
+                    color: Theme.card
                     border.width: 1
-                    border.color: Theme.glassBorder
+                    border.color: Theme.edge
 
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
-                        color: Theme.specularDim
+                        color: Theme.accentWash
                     }
 
                     Column {
@@ -391,13 +395,13 @@ Item {
                                         text: "NVME" + index + ":"
                                         color: Theme.dim
                                         font.family: Theme.fontMono
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.szBody
                                     }
                                     Text {
                                         text: modelData + "°C"
                                         color: view.tempColor(modelData)
                                         font.family: Theme.fontMono
-                                        font.pixelSize: 12
+                                        font.pixelSize: Theme.szBody
                                         font.weight: Font.Medium
                                     }
                                 }
@@ -411,15 +415,15 @@ Item {
                     width: (parent.width - 24) / 3
                     height: 72
                     radius: 0
-                    color: Theme.glassCard
+                    color: Theme.card
                     border.width: 1
-                    border.color: Theme.glassBorder
+                    border.color: Theme.edge
 
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
-                        color: Theme.specularDim
+                        color: Theme.accentWash
                     }
 
                     Column {
@@ -438,13 +442,13 @@ Item {
                                         text: "DIMM" + index + ":"
                                         color: Theme.dim
                                         font.family: Theme.fontMono
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.szBody
                                     }
                                     Text {
                                         text: modelData + "°C"
                                         color: view.tempColor(modelData)
                                         font.family: Theme.fontMono
-                                        font.pixelSize: 12
+                                        font.pixelSize: Theme.szBody
                                         font.weight: Font.Medium
                                     }
                                 }
@@ -458,15 +462,15 @@ Item {
                     width: (parent.width - 24) / 3
                     height: 72
                     radius: 0
-                    color: Theme.glassCard
+                    color: Theme.card
                     border.width: 1
-                    border.color: Theme.glassBorder
+                    border.color: Theme.edge
 
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
-                        color: Theme.specularDim
+                        color: Theme.accentWash
                     }
 
                     Column {
@@ -480,13 +484,13 @@ Item {
                                 segs: 10
                                 segWidth: 5
                                 segHeight: 10
-                                barColor: Theme.neonYellow
+                                barColor: Theme.level(pct)
                             }
                             Text {
                                 text: view.telemetryData.memory ? (view.telemetryData.memory.used_mb / 1024).toFixed(1) + " / " + (view.telemetryData.memory.total_mb / 1024).toFixed(0) + " GB" : "--"
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                                 font.weight: Font.Medium
                             }
                         }

@@ -150,12 +150,12 @@ ShellRoot {
                 spacing: 12
 
                 opacity: (root.shown && root.worthShowing) ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutCubic } }
 
                 // Slides up a few px as it appears rather than just fading.
                 transform: Translate {
                     y: stack.opacity > 0.5 ? 0 : 6
-                    Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+                    Behavior on y { NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutCubic } }
                 }
 
                 // ---- column tape floating capsule -------------------------
@@ -165,16 +165,16 @@ ShellRoot {
                     width: tape.width + 20
                     height: 20
                     radius: 0
-                    color: Qt.rgba(Theme.obsidianBase.r, Theme.obsidianBase.g, Theme.obsidianBase.b, 0.75)
+                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.75)
                     border.width: 1
-                    border.color: Theme.glassBorder
+                    border.color: Theme.edge
 
                     // Top specular catch
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
-                        color: Theme.specularDim
+                        color: Theme.accentWash
                     }
 
                     Item {
@@ -216,10 +216,10 @@ ShellRoot {
                                     opacity: index === root.activeColumn ? 1.0
                                              : (modelData.visible ? 0.45 : 0.16)
 
-                                    Behavior on width   { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                                    Behavior on height  { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
-                                    Behavior on opacity { NumberAnimation { duration: 220 } }
-                                    Behavior on color   { ColorAnimation  { duration: 220 } }
+                                    Behavior on width   { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                                    Behavior on height  { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                                    Behavior on opacity { NumberAnimation { duration: Theme.easeMs } }
+                                    Behavior on color   { ColorAnimation  { duration: Theme.easeMs } }
                                 }
                             }
                         }

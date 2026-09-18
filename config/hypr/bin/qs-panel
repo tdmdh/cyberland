@@ -9,7 +9,7 @@ target=$1
 [ -n "$target" ] || { echo "usage: qs-panel <module>" >&2; exit 2; }
 
 case "$target" in
-    control|music|cyberpad|keys|agent|clip|todo|sensor|radar|dev|nodemap|expose|palette|schematic|launcher|notify)
+    control|music|cyberpad|keys|agent|clip|todo|sensor|radar|dev|nodemap|expose|palette|schematic|launcher|notify|spectrum)
         exec qs -c deck ipc call deck toggle "$target"
         ;;
     *)

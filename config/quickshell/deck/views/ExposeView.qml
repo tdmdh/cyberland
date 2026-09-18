@@ -11,8 +11,6 @@ Item {
     readonly property string panelTitle: "EXPOSE"
     readonly property string panelJp: "一覧"
     readonly property string panelHint: "1-9  JUMP TO WORKSPACE  •  CLICK  FOCUS  •  ESC  CLOSE"
-    readonly property int panelWidth: 1440
-    readonly property int panelHeight: 820
     readonly property bool fullBleed: true
     readonly property string placement: "center"
 
@@ -102,7 +100,7 @@ Item {
                 jp: "窓"
                 value: ("0" + view.spaces.reduce((n, w) => n + w.windows.length, 0)).slice(-2)
                 subValue: "TOPLEVELS"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -139,15 +137,15 @@ Item {
                     height: 232
 
                     scale: cellMouse.pressed ? 0.98 : (cellMouse.containsMouse ? 1.015 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
+                    Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
 
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 4
                         radius: 0
-                        color: cell.modelData.focused ? Theme.glassCard : Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.25)
+                        color: cell.modelData.focused ? Theme.card : Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.25)
                         border.width: 1
-                        border.color: cell.modelData.focused ? Theme.accent : Theme.glassBorder
+                        border.color: cell.modelData.focused ? Theme.accent : Theme.edge
                         clip: true
 
                         // Top specular catch
@@ -155,7 +153,7 @@ Item {
                             anchors { top: parent.top; left: parent.left; right: parent.right }
                             height: 1
                             visible: cell.modelData.focused
-                            color: Theme.specularCatch
+                            color: Theme.accentEdge
                         }
                     }
 
@@ -169,13 +167,13 @@ Item {
                             color: cell.modelData.focused ? Theme.accent
                                  : cell.modelData.onScreen ? Theme.text : Theme.dim
                             font.family: Theme.fontMono
-                            font.pixelSize: 17
+                            font.pixelSize: Theme.szValue
                             font.weight: Font.Bold
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "作業領域"
-                            color: Theme.line
+                            color: Theme.dim
                             font.family: Theme.fontJP
                             font.pixelSize: Theme.szMicro
                         }
@@ -201,15 +199,15 @@ Item {
                                                     * modelData.w / winRow.total)
                                 height: winRow.height
                                 radius: 0
-                                color: modelData.focused ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Theme.glassCard
+                                color: modelData.focused ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Theme.card
                                 border.width: 1
-                                border.color: modelData.focused ? Theme.accent : Theme.glassBorder
+                                border.color: modelData.focused ? Theme.accent : Theme.edge
 
                                 Rectangle {
                                     anchors { top: parent.top; left: parent.left; right: parent.right }
                                     anchors.margins: 4
                                     height: 1
-                                    color: Theme.specularDim
+                                    color: Theme.accentWash
                                 }
 
                                 Text {
@@ -219,8 +217,8 @@ Item {
                                     text: modelData.cls
                                     color: modelData.focused ? Theme.accent : Theme.dim
                                     font.family: Theme.fontDisplay
-                                    font.pixelSize: 11
-                                    font.letterSpacing: 1.2
+                                    font.pixelSize: Theme.szBody
+                                    font.letterSpacing: Theme.trkLabel
                                     elide: Text.ElideRight
                                 }
                             }
@@ -235,8 +233,8 @@ Item {
                               : cell.modelData.windows.map(c => c.cls).join(" · ")
                         color: Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 11
-                        font.letterSpacing: 1.0
+                        font.pixelSize: Theme.szBody
+                        font.letterSpacing: Theme.trkLabel
                         elide: Text.ElideRight
                     }
 

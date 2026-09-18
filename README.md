@@ -16,7 +16,7 @@ regenerated from the wallpaper.
 | | |
 |---|---|
 | **Compositor** | Hyprland 0.56+, configured in **Lua** rather than hyprlang |
-| **Shell** | Quickshell: frame, HUD, notifications, polkit agent, lock, idle, and a modal deck hosting 16 panels |
+| **Shell** | Quickshell: frame, HUD, notifications, polkit agent, lock, idle, and a modal deck hosting 17 panels, including a Spotlight-style launcher |
 | **Theming** | wallust generates a palette from the wallpaper, a Python clamp step snaps it into the design system, then eight apps reload |
 | **Terminal** | kitty, with ghostty configured alongside |
 | **Files** | superfile |
@@ -76,9 +76,10 @@ config/          symlinked into ~/.config/
     conf/            monitors, look and feel, animations, input, binds, rules, autostart
     theme.lua        every tweakable value: fonts, gaps, colors, apps
     bin/             sysbus, sensorprobe, portprobe, devprobe telemetry daemons
+    src/fileindex/   Go file indexer behind the launcher, built by install.sh
   quickshell/
     common/          Theme singleton and shared components
-    deck/views/      the 16 modal panels
+    deck/views/      the 17 modal panels; rank.js is the launcher's ranking
     frame/ hud/ notify/ auth/ lock/ idle/
   wallust/       palette templates
 home/.zshrc      symlinked into ~/

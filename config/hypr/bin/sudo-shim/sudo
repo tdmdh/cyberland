@@ -1,0 +1,24 @@
+#!/bin/sh
+# sudo whose password prompt appears on the quickshell auth card, not the tty.
+#
+# On PATH only inside dev-session terminals: activate.zsh, sourced by term() in
+# each project's dev.sh. Those open on silent workspaces where a tty prompt
+# waits unseen. sudo typed anywhere else keeps asking in its own terminal.
+#
+# Plain sudo, prompting in the terminal as before, whenever the card cannot
+# take the request: not running, or an auth build without the askpass door.
+#
+# sudo rejects -S (password from stdin) together with -A as a usage error, so a
+# caller asking for stdin gets plain sudo too.
+# ponytail: scanning stops at the first non-option word, so -S after an option
+# value (sudo -u root -S) or bundled (-kS) is missed and hits that usage error.
+qs -c auth ipc show 2>/dev/null | grep -q 'function ask(' || exec /usr/bin/sudo "$@"
+
+for a in "$@"; do
+    case $a in
+        -S|--stdin) exec /usr/bin/sudo "$@" ;;
+        -*) ;;
+        *) break ;;
+    esac
+done
+SUDO_ASKPASS="$HOME/.config/hypr/bin/qs-askpass" exec /usr/bin/sudo -A "$@"

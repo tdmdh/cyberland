@@ -33,7 +33,7 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         visible: t.jp !== ""
         text: t.jp
-        color: Theme.line
+        color: Theme.accent
         opacity: Theme.opacityJP
         font.family: Theme.fontJP
         font.pixelSize: Theme.szMicro

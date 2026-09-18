@@ -13,8 +13,6 @@ Item {
     readonly property string panelHint: view.feedbackMsg !== ""
         ? view.feedbackMsg + "  •  ESC CLOSE"
         : "↑ ↓  SELECT  •  ENTER  APPLY  •  E  CYCLE EFFECT  •  C  COPY JSON  •  /  FILTER  •  ESC  CLOSE"
-    readonly property int panelWidth: 1200
-    readonly property int panelHeight: 840
     readonly property bool fullBleed: true
     readonly property string placement: "center"
 
@@ -35,9 +33,13 @@ Item {
         { id: "BLUR",     name: "BLUR",     jp: "暈し", op: "-blur 0x10" },
         { id: "CHARCOAL", name: "CHARCOAL", jp: "木炭", op: "-charcoal 0x5" },
         { id: "EDGE",     name: "EDGE",     jp: "輪郭", op: "-edge 1" },
+        { id: "EMBOSS",   name: "EMBOSS",   jp: "浮彫", op: "-emboss 0x5" },
         { id: "NEGATE",   name: "NEGATE",   jp: "反転", op: "-negate" },
+        { id: "OIL",      name: "OIL",      jp: "油彩", op: "-paint 4" },
         { id: "POSTER",   name: "POSTER",   jp: "階調", op: "-posterize 4" },
         { id: "SEPIA",    name: "SEPIA",    jp: "褐色", op: "-sepia-tone 65%" },
+        { id: "SOLAR",    name: "SOLAR",    jp: "露光", op: "-solarize 80%" },
+        { id: "SHARPEN",  name: "SHARPEN",  jp: "鮮明", op: "-sharpen 0x5" },
         { id: "VIGNETTE", name: "VIGNETTE", jp: "暈影", op: "-background black -vignette 0x3" }
     ]
 
@@ -168,7 +170,7 @@ Item {
                 jp: "壁紙"
                 value: ("0" + walls.count).slice(-2)
                 subValue: "WALLPAPERS"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             DynamicPill {
@@ -227,7 +229,7 @@ Item {
                     color: view.wallQuery === "" ? Theme.dim : Theme.text
                     font.family: view.wallQuery === "" ? Theme.fontDisplay : Theme.fontMono
                     font.pixelSize: view.wallQuery === "" ? Theme.szBody : Theme.szValue
-                    font.letterSpacing: view.wallQuery === "" ? 2.5 : 0.5
+                    font.letterSpacing: view.wallQuery === "" ? Theme.trkWide : Theme.trkTight
                     elide: Text.ElideRight
                 }
 
@@ -278,16 +280,16 @@ Item {
                     width: wallList.width
                     height: 32
                     radius: 0
-                    color: ListView.isCurrentItem ? Theme.glassCard : (wallMouse.containsMouse ? Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.25) : "transparent")
+                    color: ListView.isCurrentItem ? Theme.card : (wallMouse.containsMouse ? Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.25) : "transparent")
                     border.width: 1
-                    border.color: ListView.isCurrentItem ? Theme.glassBorder : "transparent"
+                    border.color: ListView.isCurrentItem ? Theme.edge : "transparent"
 
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
                         visible: ListView.isCurrentItem
-                        color: Theme.specularCatch
+                        color: Theme.accentEdge
                     }
 
                     readonly property bool isCurrent: model.filePath === view.currentWall
@@ -344,7 +346,7 @@ Item {
                             color: isCurrent ? Theme.accent : (ListView.isCurrentItem ? Theme.text : Theme.dim)
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szBody
-                            font.letterSpacing: 1.2
+                            font.letterSpacing: Theme.trkLabel
                             elide: Text.ElideMiddle
                         }
                     }
@@ -372,12 +374,12 @@ Item {
                     color: Theme.accent
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szLead
-                    font.letterSpacing: 2.5
+                    font.letterSpacing: Theme.trkWide
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "鑑賞"
-                    color: Theme.line
+                    color: Theme.dim
                     font.family: Theme.fontJP
                     font.pixelSize: Theme.szMicro
                 }
@@ -458,7 +460,7 @@ Item {
                 color: Theme.dim
                 font.family: Theme.fontDisplay
                 font.pixelSize: Theme.szMicro
-                font.letterSpacing: 1.5
+                font.letterSpacing: Theme.trkLabel
             }
 
             Flow {
@@ -512,12 +514,12 @@ Item {
                     color: Theme.accent
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szLead
-                    font.letterSpacing: 2.5
+                    font.letterSpacing: Theme.trkWide
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "色標"
-                    color: Theme.line
+                    color: Theme.dim
                     font.family: Theme.fontJP
                     font.pixelSize: Theme.szMicro
                 }

@@ -12,7 +12,7 @@ Item {
     readonly property string panelHint: view.armedPid > 0
         ? "CONFIRM KILL: PRESS K AGAIN TO TERMINATE PID " + view.armedPid + "  •  ESC CLOSE"
         : "↑ ↓  MOVE  •  ENTER / O  BROWSER  •  K  KILL PID  •  R  REFRESH  •  /  FILTER  •  ESC  CLOSE"
-    readonly property int panelWidth: 960
+    readonly property int panelWidth: Theme.panelM
     readonly property int panelHeight: 640
     readonly property string placement: "center"
 
@@ -145,7 +145,7 @@ Item {
                 jp: "開発"
                 value: ("0" + view.countDev).slice(-2)
                 subValue: "LOCAL"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             Btn {
@@ -184,7 +184,7 @@ Item {
                 color: view.query === "" ? Theme.dim : Theme.text
                 font.family: view.query === "" ? Theme.fontDisplay : Theme.fontMono
                 font.pixelSize: view.query === "" ? Theme.szBody : Theme.szValue
-                font.letterSpacing: view.query === "" ? 3 : 0.5
+                font.letterSpacing: view.query === "" ? Theme.trkWide : Theme.trkTight
                 elide: Text.ElideRight
             }
 
@@ -229,7 +229,7 @@ Item {
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: Theme.glassBorder }
+        Rectangle { width: parent.width; height: 1; color: Theme.edge }
 
         // Sockets List View
         Item {
@@ -253,9 +253,9 @@ Item {
                     width: socketList.width
                     height: 36
                     radius: 0
-                    color: ListView.isCurrentItem ? Theme.glassCard : (rowMouse.containsMouse ? Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.3) : "transparent")
+                    color: ListView.isCurrentItem ? Theme.card : (rowMouse.containsMouse ? Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.3) : "transparent")
                     border.width: 1
-                    border.color: view.armedPid === modelData.pid ? Theme.alert : (ListView.isCurrentItem ? Theme.glassBorder : "transparent")
+                    border.color: view.armedPid === modelData.pid ? Theme.alert : (ListView.isCurrentItem ? Theme.edge : "transparent")
 
                     // Top specular hairline catch
                     Rectangle {
@@ -263,7 +263,7 @@ Item {
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
                         visible: ListView.isCurrentItem
-                        color: Theme.specularCatch
+                        color: Theme.accentEdge
                     }
 
                     MouseArea {
@@ -288,14 +288,14 @@ Item {
                             width: 38
                             height: 18
                             radius: 0
-                            color: modelData.proto === "tcp" ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Qt.rgba(Theme.amber.r, Theme.amber.g, Theme.amber.b, 0.18)
+                            color: modelData.proto === "tcp" ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Qt.rgba(Theme.dim.r, Theme.dim.g, Theme.dim.b, 0.18)
                             border.width: 1
-                            border.color: modelData.proto === "tcp" ? Theme.accent : Theme.amber
+                            border.color: modelData.proto === "tcp" ? Theme.accent : Theme.dim
 
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.proto.toUpperCase()
-                                color: modelData.proto === "tcp" ? Theme.accent : Theme.amber
+                                color: modelData.proto === "tcp" ? Theme.accent : Theme.dim
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.szMicro
                                 font.weight: Font.Bold
@@ -319,9 +319,9 @@ Item {
                             width: 92
                             height: 18
                             radius: 0
-                            color: modelData.public ? Qt.rgba(Theme.amber.r, Theme.amber.g, Theme.amber.b, 0.18) : "transparent"
+                            color: modelData.public ? Qt.rgba(Theme.warn.r, Theme.warn.g, Theme.warn.b, 0.18) : "transparent"
                             border.width: modelData.public ? 1 : 0
-                            border.color: Theme.amber
+                            border.color: Theme.warn
 
                             Text {
                                 anchors.centerIn: parent
@@ -396,7 +396,7 @@ Item {
                         color: view.armedPid === modelData.pid ? Theme.alert : Theme.accent2
                         font.family: Theme.fontDisplay
                         font.pixelSize: Theme.szMicro
-                        font.letterSpacing: 1.5
+                        font.letterSpacing: Theme.trkLabel
                     }
                 }
             }

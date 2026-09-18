@@ -10,7 +10,7 @@ Item {
     property color color: Theme.accent
     property color jpColor: Theme.line
     property int pixelSize: Theme.szLead
-    property real letterSpacing: 2.8
+    property real letterSpacing: Theme.trkWide
     property int weight: Font.Medium
     property string fontFamily: Theme.fontDisplay
 
@@ -71,7 +71,7 @@ Item {
                 x: -1.5
                 y: 0
                 text: glText.displayText
-                color: Theme.neonCyan
+                color: Theme.accent
                 opacity: 0.75
                 font.family: glText.fontFamily
                 font.pixelSize: glText.pixelSize
@@ -85,7 +85,7 @@ Item {
                 x: 1.5
                 y: 0
                 text: glText.displayText
-                color: Theme.neonMagenta
+                color: Theme.accent2
                 opacity: 0.75
                 font.family: glText.fontFamily
                 font.pixelSize: glText.pixelSize

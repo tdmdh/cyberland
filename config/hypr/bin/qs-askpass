@@ -1,0 +1,59 @@
+#!/bin/sh
+# SUDO_ASKPASS helper: put a sudo password prompt on the quickshell `auth` card.
+#
+# sudo runs this with its prompt as $1 and reads the password from stdout.
+# Dev-session terminals open on silent workspaces, so a tty prompt there waits
+# where nobody is looking; sudo-shim/ makes their sudo call this instead.
+#
+# The secret comes back through a FIFO, never argv or a file: argv is readable
+# by anyone in /proc, and the card writes into the pipe on a process's stdin.
+# The FIFO lives in its own 0700 mktemp dir, removed on exit, so an answer that
+# arrives after this has given up has no path to land on.
+#
+#   by hand:  SUDO_ASKPASS=~/.config/hypr/bin/qs-askpass sudo -k -A true
+#   test:     ~/.config/quickshell/auth/selftest.sh
+set -u
+
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/qs-askpass.XXXXXX") || exit 1
+fifo=$dir/fifo
+reader=""
+# Every exit takes the request off the card too, so a Ctrl-C in the asking
+# terminal does not leave a prompt up that nothing will read.
+trap 'rm -rf "$dir"; qs -c auth ipc call auth drop "$fifo" >/dev/null 2>&1' EXIT
+trap '[ -n "$reader" ] && kill "$reader" 2>/dev/null; exit 1' INT TERM HUP
+mkfifo -m 600 "$fifo" || exit 1
+
+# What is being authorized, shown verbatim: sudo is our parent, and its argv is
+# the command. Which terminal: the nearest kitty ancestor's window title
+# (noname:backend), the only way to tell several asking terminals apart.
+# ponytail: one kitty process with several OS windows reports the first title.
+# Newlines and tabs flatten to spaces: the card shows one line and elides the
+# middle, and a multi-line `sudo sh -c '...'` would otherwise fill the card.
+cmd=$(tr '\0\n\t' '   ' < "/proc/$PPID/cmdline" 2>/dev/null | sed 's/ *$//')
+term="A terminal"
+p=$PPID
+while [ "$p" -gt 1 ] 2>/dev/null; do
+    if [ "$(cat "/proc/$p/comm" 2>/dev/null)" = kitty ]; then
+        t=$(hyprctl clients -j 2>/dev/null |
+            jq -r --argjson p "$p" 'first(.[] | select(.pid == $p) | .title) // empty')
+        [ -n "$t" ] && term=$t
+        break
+    fi
+    # ppid is field 4 of stat, read after the last ')' because comm may hold spaces.
+    p=$(sed 's/.*) //' "/proc/$p/stat" 2>/dev/null | cut -d' ' -f2) || break
+done
+
+# No card, or a card without the askpass door: fail now, rather than leave sudo
+# waiting on a pipe nobody will write to. Checked against `ipc show` because
+# `ipc call` on a missing function prints "Function not found." and exits 0.
+qs -c auth ipc show 2>/dev/null | grep -q 'function ask(' || exit 1
+qs -c auth ipc call auth ask "${1:-Password:}" "$cmd" "$term" "$PPID" "$fifo" \
+    >/dev/null 2>&1 || exit 1
+
+# Blocks until the card answers. Cancel closes the pipe with nothing written,
+# which sudo reports as "no password was provided". Backgrounded with `wait`
+# because a shell defers traps until a foreground child returns.
+# ponytail: 5 minute ceiling, sudo's own default passwd_timeout.
+timeout 300 cat "$fifo" &
+reader=$!
+wait "$reader"

@@ -17,7 +17,7 @@ local dim      = wal.accentDim     or "#165A52"
 return {
     apps = {
         terminal    = "kitty",
-        fileManager = "kitty <D-S>-class superfile -e spf",
+        fileManager = "kitty --class superfile -e spf",
         browser     = 'xdg-open "https://"',
         notifPanel  = "qs -c notify ipc call notify toggle",
         wallpapers  = "~/Pictures/wallpapers",

@@ -91,7 +91,7 @@ disabled = true
 # Rewritten on every wallpaper change. Keep this block last.
 [palettes.wall]
 text = "#F1DAE3"
-dim = "#8A6071"
+dim = "#9F7585"
 line = "#335270"
 accent = "#8DB3D9"
 accent2 = "#477BAF"

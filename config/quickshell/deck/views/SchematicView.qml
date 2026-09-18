@@ -11,8 +11,6 @@ Item {
     readonly property string panelTitle: "SCHEMATIC"
     readonly property string panelJp: "設計図"
     readonly property string panelHint: "TAB (HOLD): 8-WAY WHEEL  •  1..9: LINK/SELECT  •  E: STYLE  •  L: LABEL  •  SPACE: ROTATE  •  DEL: REMOVE  •  ESC: CLOSE"
-    readonly property int panelWidth: 1560
-    readonly property int panelHeight: 900
     readonly property bool fullBleed: true
     readonly property string placement: "center"
 
@@ -475,7 +473,7 @@ Item {
                 jp: "図面"
                 value: view.activeFile.replace(".mmd", "").toUpperCase()
                 subValue: "SCHEMATIC"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             DynamicPill {
@@ -497,7 +495,7 @@ Item {
                         required property string modelData
                         text: modelData.replace(".mmd", "")
                         active: view.activeFile === modelData
-                        tint: Theme.neonCyan
+                        tint: Theme.accent
                         implicitHeight: 22
                         onClicked: view.switchTab(modelData)
                     }
@@ -506,7 +504,7 @@ Item {
                 Btn {
                     text: "+ NEW"
                     jp: "作成"
-                    tint: Theme.neonGreen
+                    tint: Theme.accent
                     implicitHeight: 22
                     onClicked: view.createNewTab()
                 }
@@ -516,7 +514,7 @@ Item {
                 text: view.themeMode === "cyberpunk" ? "CYBERPUNK" : "WHITEPAPER"
                 jp: "外観"
                 active: view.themeMode === "cyberpunk"
-                tint: Theme.neonCyan
+                tint: Theme.accent
                 implicitHeight: 22
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: view.toggleTheme()
@@ -524,7 +522,7 @@ Item {
             Btn {
                 text: "COPY SVG"
                 jp: "複製"
-                tint: Theme.neonCyan
+                tint: Theme.accent
                 implicitHeight: 22
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: view.copySvg()
@@ -532,7 +530,7 @@ Item {
             Btn {
                 text: "COPY PNG"
                 jp: "高画質"
-                tint: Theme.neonGreen
+                tint: Theme.accent
                 implicitHeight: 22
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: view.copyPng()
@@ -541,7 +539,7 @@ Item {
                 text: "[C] SYNTAX"
                 jp: "文法"
                 active: view.showCodeDrawer
-                tint: Theme.neonMagenta
+                tint: Theme.accent2
                 implicitHeight: 22
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: view.showCodeDrawer = !view.showCodeDrawer
@@ -580,7 +578,7 @@ Item {
             fillColor: view.themeMode === "cyberpunk" ? Theme.layer2 : "#ffffff"
             reticles: true
             notch: true
-            notchColor: view.renderError ? Theme.alert : (view.isRendering ? Theme.neonYellow : Theme.neonCyan)
+            notchColor: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
 
             Flickable {
                 id: canvasFlick
@@ -617,7 +615,7 @@ Item {
                         transformOrigin: Item.Center
 
                         Behavior on scale {
-                            NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                            NumberAnimation { duration: Theme.easeFastMs; easing.type: Easing.OutQuad }
                         }
                     }
                 }
@@ -641,8 +639,8 @@ Item {
                         text: "CANVAS ZOOM:"
                         color: Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 9
-                        font.letterSpacing: 1.5
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Bold
                     }
 
@@ -654,9 +652,9 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Math.round(view.zoomLevel * 100) + "%"
-                        color: Theme.neonCyan
+                        color: Theme.accent
                         font.family: Theme.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.szMicro
                         width: 38
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -681,15 +679,15 @@ Item {
                     Rectangle {
                         width: 6; height: 6; radius: 0
                         anchors.verticalCenter: parent.verticalCenter
-                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.neonYellow : Theme.neonGreen)
+                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: view.renderError ? "SYNTAX FAULT" : (view.isRendering ? "COMPILING..." : "RENDER ONLINE")
-                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.neonYellow : Theme.neonGreen)
+                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 9
-                        font.letterSpacing: 1
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Bold
                     }
                 }
@@ -713,8 +711,8 @@ Item {
                         text: "⚠ " + view.renderError
                         color: Theme.alert
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 10
-                        font.letterSpacing: 1.2
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         font.weight: Font.Bold
                     }
                 }
@@ -733,10 +731,10 @@ Item {
                     anchors.fill: parent
                     color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.90)
                     border.width: 1
-                    border.color: view.selectedNodeIndex >= 0 ? Theme.neonCyan : Theme.line
+                    border.color: view.selectedNodeIndex >= 0 ? Theme.accent : Theme.line
                     opacity: 0.96
 
-                    Behavior on border.color { ColorAnimation { duration: 180 } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.easeMs } }
 
                     Bracket { corner: "tl"; anchors.left: parent.left; anchors.top: parent.top; visible: view.selectedNodeIndex >= 0 }
                     Bracket { corner: "tr"; anchors.right: parent.right; anchors.top: parent.top; visible: view.selectedNodeIndex >= 0 }
@@ -757,19 +755,19 @@ Item {
                             text: "GRAPH TOPOLOGY: " + view.nodes.length + " NODES // " + view.edges.length + " EDGES"
                             color: Theme.dim
                             font.family: Theme.fontMono
-                            font.pixelSize: 9
-                            font.letterSpacing: 1
+                            font.pixelSize: Theme.szMicro
+                            font.letterSpacing: Theme.trkLabel
                         }
 
                         Text {
                             text: view.selectedNodeIndex >= 0
                                 ? ("SOURCE: [" + view.nodes[view.selectedNodeIndex].badge + "] " + view.nodes[view.selectedNodeIndex].label + " ➔ SELECT TARGET (1..9 OR CLICK)")
                                 : "HOLD TAB TO PLACE COMPONENT // PRESS 1..9 OR CLICK TO SELECT SOURCE"
-                            color: view.selectedNodeIndex >= 0 ? Theme.neonCyan : Theme.dim
+                            color: view.selectedNodeIndex >= 0 ? Theme.accent : Theme.dim
                             font.family: Theme.fontDisplay
-                            font.pixelSize: 9
+                            font.pixelSize: Theme.szMicro
                             font.weight: Font.Bold
-                            font.letterSpacing: 1.2
+                            font.letterSpacing: Theme.trkLabel
                         }
                     }
 
@@ -781,19 +779,19 @@ Item {
                         Btn {
                             text: "STYLE [E]"
                             implicitHeight: 18
-                            tint: Theme.neonMagenta
+                            tint: Theme.accent2
                             onClicked: view.cycleEdgeStyle()
                         }
                         Btn {
                             text: "LABEL [L]"
                             implicitHeight: 18
-                            tint: Theme.neonCyan
+                            tint: Theme.accent
                             onClicked: view.cycleEdgeLabel()
                         }
                         Btn {
                             text: "ROTATE [SPACE]"
                             implicitHeight: 18
-                            tint: Theme.neonGreen
+                            tint: Theme.accent
                             onClicked: view.rotateLayout()
                         }
                         Btn {
@@ -835,13 +833,13 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     color: chip.isSelected
-                                        ? Qt.rgba(Theme.neonCyan.r, Theme.neonCyan.g, Theme.neonCyan.b, 0.24)
+                                        ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
                                         : Theme.layer1
                                     border.width: chip.isSelected ? 2 : 1
-                                    border.color: chip.isSelected ? Theme.neonCyan : Theme.line2
+                                    border.color: chip.isSelected ? Theme.accent : Theme.line2
 
-                                    Behavior on color { ColorAnimation { duration: 120 } }
-                                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                                    Behavior on color { ColorAnimation { duration: Theme.easeFastMs } }
+                                    Behavior on border.color { ColorAnimation { duration: Theme.easeFastMs } }
 
                                     Row {
                                         id: chipContent
@@ -851,15 +849,15 @@ Item {
                                         Rectangle {
                                             width: 18; height: 18
                                             radius: 0
-                                            color: chip.isSelected ? Theme.neonCyan : Theme.layer3
+                                            color: chip.isSelected ? Theme.accent : Theme.layer3
                                             anchors.verticalCenter: parent.verticalCenter
 
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: chip.modelData.badge
-                                                color: chip.isSelected ? Theme.onAccent : Theme.neonCyan
+                                                color: chip.isSelected ? Theme.onAccent : Theme.accent
                                                 font.family: Theme.fontMono
-                                                font.pixelSize: 10
+                                                font.pixelSize: Theme.szMicro
                                                 font.weight: Font.Bold
                                             }
                                         }
@@ -873,7 +871,7 @@ Item {
                                                 : "[SVC]"
                                             color: Theme.dim
                                             font.family: Theme.fontMono
-                                            font.pixelSize: 9
+                                            font.pixelSize: Theme.szMicro
                                         }
 
                                         Text {
@@ -881,7 +879,7 @@ Item {
                                             text: chip.modelData.label
                                             color: chip.isSelected ? Theme.text : Theme.dim
                                             font.family: Theme.fontDisplay
-                                            font.pixelSize: 11
+                                            font.pixelSize: Theme.szBody
                                             font.weight: chip.isSelected ? Font.Bold : Font.Normal
                                         }
                                     }
@@ -922,16 +920,16 @@ Item {
             visible: x < parent.width
 
             x: view.showCodeDrawer ? (parent.width - width) : parent.width
-            Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on x { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
 
             ChamferBox {
                 anchors.fill: parent
                 cut: 8
-                strokeColor: Theme.neonMagenta
+                strokeColor: Theme.accent2
                 fillColor: Qt.rgba(Theme.layer1.r, Theme.layer1.g, Theme.layer1.b, 0.98)
                 reticles: true
                 notch: true
-                notchColor: Theme.neonMagenta
+                notchColor: Theme.accent2
 
                 Column {
                     anchors.fill: parent
@@ -949,17 +947,17 @@ Item {
 
                             Text {
                                 text: "// MERMAID SYNTAX //"
-                                color: Theme.neonMagenta
+                                color: Theme.accent2
                                 font.family: Theme.fontDisplay
-                                font.pixelSize: 12
-                                font.letterSpacing: 2
+                                font.pixelSize: Theme.szBody
+                                font.letterSpacing: Theme.trkLabel
                                 font.weight: Font.Bold
                             }
 
                             Text {
                                 text: "文法"
                                 color: Theme.dim
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                             }
                         }
 
@@ -980,19 +978,19 @@ Item {
                             text: "LINES: " + view.rawBuffer.split("\n").length
                             color: Theme.dim
                             font.family: Theme.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.szMicro
                         }
                         Text {
                             text: "NODES: " + view.nodes.length
                             color: Theme.dim
                             font.family: Theme.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.szMicro
                         }
                         Text {
                             text: "EDGES: " + view.edges.length
                             color: Theme.dim
                             font.family: Theme.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.szMicro
                         }
                     }
 
@@ -1016,10 +1014,10 @@ Item {
                                 text: view.rawBuffer
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
-                                font.letterSpacing: 0.5
+                                font.pixelSize: Theme.szBody
+                                font.letterSpacing: Theme.trkTight
                                 selectByMouse: true
-                                selectionColor: Theme.neonMagenta
+                                selectionColor: Theme.accent2
                                 readOnly: true
                             }
                         }
@@ -1032,7 +1030,7 @@ Item {
                         Btn {
                             text: "COPY CODE"
                             jp: "文面複製"
-                            tint: Theme.neonMagenta
+                            tint: Theme.accent2
                             onClicked: {
                                 Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy && notify-send -a 'SCHEMATIC' 'CODE COPIED' 'Mermaid syntax copied to clipboard'", "sh", view.rawBuffer]);
                             }
@@ -1041,7 +1039,7 @@ Item {
                         Btn {
                             text: "FORCE RECOMPILE"
                             jp: "再描画"
-                            tint: Theme.neonCyan
+                            tint: Theme.accent
                             onClicked: view.triggerRender()
                         }
                     }

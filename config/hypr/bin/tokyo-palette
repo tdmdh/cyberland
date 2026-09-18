@@ -16,6 +16,8 @@ What is enforced is legibility, not taste:
   * the ground stays dark enough to be a ground        (luminance floor)
   * text clears 12:1 against it                        (far above WCAG AA)
   * the accent clears 7:1 against it                   (above AA)
+  * secondary text clears 4.5:1 against layer2         (AA, on the lightest
+                                                        surface labels sit on)
 
 A wallust colour that fails one of those is lifted in lightness, keeping its
 hue and saturation -- so it is still the wallpaper's colour, just a readable
@@ -50,6 +52,8 @@ SEC_L       = 0.46
 TEXT_CONTRAST   = 12.0
 ACCENT_CONTRAST = 7.0   # above AA: the accent is a signal at arm's length,
                         # not body text, and wallust's colours run muted
+SEC_CONTRAST    = 4.5   # AA. Every label on the desktop is secondary text at
+                        # 10px; a fixed SEC_L gave 3.7:1 on a mauve wallpaper
 
 
 def hexof(r, g, b):
@@ -147,7 +151,8 @@ def build(colors):
     fg_h, fg_s, fg_l = parse(colors.get("foreground") or colors.get("color15"),
                              (220.0, 0.08, 0.92))
     text = lift((fg_h, fg_s, max(fg_l, TEXT_MIN_L)), ground, TEXT_CONTRAST)
-    sec = (fg_h, min(fg_s, 0.18), SEC_L)
+    layer2 = (bg_h, bg_s, min(bg_l + LAYER_STEP[2], 0.20))
+    sec = lift((fg_h, min(fg_s, 0.18), SEC_L), layer2, SEC_CONTRAST)
 
     acc = pick_accent(colors)
     if acc is None:
@@ -321,6 +326,8 @@ def selftest():
             f"{label}: text contrast {ratio(p['primaryText'], bg):.1f}"
         assert ratio(p["accentPrimary"], bg) >= ACCENT_CONTRAST - 0.2, \
             f"{label}: accent contrast {ratio(p['accentPrimary'], bg):.1f}"
+        assert ratio(p["secondaryText"], p["layerBackground2"]) >= SEC_CONTRAST - 0.1, \
+            f"{label}: secondary contrast {ratio(p['secondaryText'], p['layerBackground2']):.1f}"
         assert p["alert"] == "#FF4D5A" and p["warn"] == "#FFB020", f"{label}: semantics moved"
 
     # 500 random wallpapers must all produce a legible desktop.

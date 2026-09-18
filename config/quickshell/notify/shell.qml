@@ -230,9 +230,9 @@ ShellRoot {
                     Rectangle {
                         anchors.fill: parent
                         radius: 0
-                        color: Theme.glassCard
+                        color: Theme.card
                         border.width: 1
-                        border.color: card.crit ? Theme.alert : Theme.glassBorder
+                        border.color: card.crit ? Theme.alert : Theme.edge
                         clip: true
 
                         // Top specular hairline catch
@@ -243,7 +243,7 @@ ShellRoot {
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: "transparent" }
-                                GradientStop { position: 0.5; color: Theme.specularCatch }
+                                GradientStop { position: 0.5; color: Theme.accentEdge }
                                 GradientStop { position: 1.0; color: "transparent" }
                             }
                         }
@@ -277,7 +277,7 @@ ShellRoot {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: appTag.verticalCenter
                                 text: root.ago(card.modelData.id)
-                                color: Theme.line
+                                color: Theme.dim
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.szMicro
                             }
@@ -290,7 +290,7 @@ ShellRoot {
                             color: card.crit ? Theme.alert : Theme.text
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szValue
-                            font.letterSpacing: 0.4
+                            font.letterSpacing: Theme.trkTight
                             font.weight: Font.Medium
                             elide: Text.ElideRight
                             maximumLineCount: 1
@@ -470,16 +470,16 @@ ShellRoot {
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: root.ago(row.modelData.id)
-                                        color: Theme.line
+                                        color: Theme.dim
                                         font.family: Theme.fontMono
                                         font.pixelSize: Theme.szMicro
                                     }
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: "✕"
-                                        color: hov.hovered ? Theme.alert : Theme.line2
+                                        color: hov.hovered ? Theme.alert : Theme.dim
                                         font.family: Theme.fontMono
-                                        font.pixelSize: Theme.szTail
+                                        font.pixelSize: Theme.szMicro
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
@@ -497,7 +497,7 @@ ShellRoot {
                                 color: row.crit ? Theme.alert : Theme.text
                                 font.family: Theme.fontDisplay
                                 font.pixelSize: Theme.szBody + 2
-                                font.letterSpacing: 0.4
+                                font.letterSpacing: Theme.trkTight
                                 elide: Text.ElideRight
                                 maximumLineCount: 1
                             }
@@ -550,7 +550,7 @@ ShellRoot {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: root.dnd ? "静音" : "空"
-                        color: Theme.line
+                        color: Theme.dim
                         font.family: Theme.fontJP
                         font.pixelSize: Theme.szMicro
                     }

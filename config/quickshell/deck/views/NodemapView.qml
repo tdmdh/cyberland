@@ -10,8 +10,6 @@ Item {
     readonly property string panelTitle: "CONTAINERS"
     readonly property string panelJp: "容器"
     readonly property string panelHint: "EDGE = SHARED DOCKER NETWORK  •  PULSE = PER-CONTAINER NET I/O DELTA  •  ESC  CLOSE"
-    readonly property int panelWidth: 1400
-    readonly property int panelHeight: 820
     readonly property bool fullBleed: true
     readonly property string placement: "center"
 
@@ -158,7 +156,7 @@ Item {
                 jp: "網"
                 value: ("0" + view.networkCount).slice(-2)
                 subValue: "NETWORKS"
-                tint: Theme.laser
+                tint: Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
             DynamicPill {
@@ -188,8 +186,8 @@ Item {
             text: view.dockerError !== "" ? view.dockerError : "NO RUNNING CONTAINERS"
             color: Theme.dim
             font.family: Theme.fontDisplay
-            font.pixelSize: 13
-            font.letterSpacing: 3
+            font.pixelSize: Theme.szBody
+            font.letterSpacing: Theme.trkWide
         }
 
         Item {
@@ -270,27 +268,27 @@ Item {
                         border.color: Theme.accent
                         opacity: node.act * 0.55
                         scale: 1 + node.act * 0.06
-                        Behavior on opacity { NumberAnimation { duration: 420 } }
-                        Behavior on scale { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.morphMs } }
+                        Behavior on scale { NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutCubic } }
                     }
 
                     Rectangle {
                         id: box
                         anchors.fill: parent
                         radius: 0
-                        color: Theme.glassCard
+                        color: Theme.card
                         border.width: 1
                         border.color: node.act > 0.02
                                       ? Theme.accent
-                                      : Theme.glassBorder
-                        Behavior on border.color { ColorAnimation { duration: 300 } }
+                                      : Theme.edge
+                        Behavior on border.color { ColorAnimation { duration: Theme.morphMs } }
 
                         // Top specular catch
                         Rectangle {
                             anchors { top: parent.top; left: parent.left; right: parent.right }
                             anchors.leftMargin: 1; anchors.rightMargin: 1
                             height: 1
-                            color: Theme.specularCatch
+                            color: Theme.accentEdge
                         }
 
                         // Health strip
@@ -317,8 +315,8 @@ Item {
                                 text: node.modelData.name
                                 color: Theme.text
                                 font.family: Theme.fontDisplay
-                                font.pixelSize: 12
-                                font.letterSpacing: 1
+                                font.pixelSize: Theme.szBody
+                                font.letterSpacing: Theme.trkLabel
                                 elide: Text.ElideRight
                             }
 
@@ -327,7 +325,7 @@ Item {
                                 text: node.modelData.image
                                 color: Theme.dim
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                                 opacity: 0.75
                                 elide: Text.ElideRight
                             }
@@ -339,7 +337,7 @@ Item {
                                       : "—"
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                                 elide: Text.ElideRight
                             }
 
@@ -348,7 +346,7 @@ Item {
                                 text: node.st ? "net " + node.st.netIO : ""
                                 color: Theme.text
                                 font.family: Theme.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.szBody
                                 opacity: 0.65
                                 elide: Text.ElideRight
                             }

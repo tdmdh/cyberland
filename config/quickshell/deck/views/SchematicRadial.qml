@@ -14,7 +14,7 @@ Item {
 
     // 8 Architectural component presets
     readonly property var presets: [
-        { type: "gateway",  label: "API Gateway",        shape: "box",      tag: "GATEWAY",  jp: "玄関", color: Theme.neonCyan,    icon: "⬡" },
+        { type: "gateway",  label: "API Gateway",        shape: "box",      tag: "GATEWAY",  jp: "玄関", color: Theme.accent,    icon: "⬡" },
         { type: "service",  label: "Microservice",       shape: "box",      tag: "SERVICE",  jp: "容器", color: "#7aa2f7",         icon: "⚙" },
         { type: "database", label: "PostgreSQL DB",      shape: "cylinder", tag: "DB [( )]", jp: "基盤", color: "#bb9af7",         icon: "🖴" },
         { type: "cache",    label: "Redis Cache",        shape: "cylinder", tag: "CACHE",    jp: "高速", color: "#e0af68",         icon: "⚡" },
@@ -30,7 +30,7 @@ Item {
     anchors.fill: parent
     visible: opacity > 0.01
     opacity: active ? 1.0 : 0.0
-    Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+    Behavior on opacity { NumberAnimation { duration: Theme.easeFastMs; easing.type: Easing.OutQuad } }
 
     onActiveChanged: {
         if (!active) {
@@ -126,7 +126,7 @@ Item {
                         ? radialRoot.presets[radialRoot.activeSector].color
                         : Theme.line
 
-            Behavior on border.color { ColorAnimation { duration: 150 } }
+            Behavior on border.color { ColorAnimation { duration: Theme.easeFastMs } }
 
             // Rotating tick marks
             Item {
@@ -162,8 +162,8 @@ Item {
                     : "⌖"
                 color: radialRoot.activeSector >= 0
                     ? radialRoot.presets[radialRoot.activeSector].color
-                    : Theme.neonCyan
-                font.pixelSize: 18
+                    : Theme.accent
+                font.pixelSize: Theme.szValue
             }
 
             Text {
@@ -173,8 +173,8 @@ Item {
                     : "HUD READY"
                 color: Theme.text
                 font.family: Theme.fontDisplay
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
+                font.pixelSize: Theme.szMicro
+                font.letterSpacing: Theme.trkLabel
                 font.weight: Font.Bold
                 elide: Text.ElideRight
             }
@@ -185,7 +185,7 @@ Item {
                     ? radialRoot.presets[radialRoot.activeSector].jp
                     : "標準"
                 color: Theme.dim
-                font.pixelSize: 9
+                font.pixelSize: Theme.szMicro
             }
         }
     }
@@ -214,7 +214,7 @@ Item {
             readonly property bool isSelected: radialRoot.activeSector === index
 
             scale: isSelected ? 1.08 : 1.0
-            Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutBack } }
+            Behavior on scale { NumberAnimation { duration: Theme.easeFastMs; easing.type: Easing.OutCubic } }
 
             // Connecting laser ray from center hub to active sector
             Rectangle {
@@ -239,8 +239,8 @@ Item {
                 border.color: sectorItem.isSelected ? sectorItem.modelData.color : Theme.line
                 opacity: 0.96
 
-                Behavior on color { ColorAnimation { duration: 100 } }
-                Behavior on border.color { ColorAnimation { duration: 100 } }
+                Behavior on color { ColorAnimation { duration: Theme.easeFastMs } }
+                Behavior on border.color { ColorAnimation { duration: Theme.easeFastMs } }
 
                 // Avionics Corner Brackets
                 Bracket { corner: "tl"; anchors.left: parent.left; anchors.top: parent.top; visible: sectorItem.isSelected }
@@ -260,7 +260,7 @@ Item {
                         text: "[" + (sectorItem.index + 1) + "]"
                         color: sectorItem.isSelected ? sectorItem.modelData.color : Theme.dim
                         font.family: Theme.fontMono
-                        font.pixelSize: 9
+                        font.pixelSize: Theme.szMicro
                         font.weight: Font.Bold
                     }
 
@@ -268,8 +268,8 @@ Item {
                         text: sectorItem.modelData.tag
                         color: sectorItem.isSelected ? Theme.text : Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 9
-                        font.letterSpacing: 1
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                         elide: Text.ElideRight
                     }
                 }
@@ -288,7 +288,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: sectorItem.modelData.icon
                         color: sectorItem.modelData.color
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.szBody
                     }
 
                     Text {
@@ -297,7 +297,7 @@ Item {
                         text: sectorItem.modelData.label
                         color: sectorItem.isSelected ? Theme.text : Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.szBody
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }

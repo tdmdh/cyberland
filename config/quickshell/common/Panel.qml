@@ -51,7 +51,7 @@ Item {
     Rectangle {
         id: scrimRect
         anchors.fill: parent
-        color: Theme.obsidianBase
+        color: Theme.bg
         visible: panel.effectiveScrim !== "none"
         opacity: 0
     }
@@ -99,9 +99,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 0
-            color: panel.effectiveScrim !== "none" ? Theme.glassCard : Theme.glassBg
+            color: panel.effectiveScrim !== "none" ? Theme.card : Theme.cardDark
             border.width: 1
-            border.color: Theme.glassBorder
+            border.color: Theme.edge
 
             // Top laser specular reflection catch
             Rectangle {
@@ -112,9 +112,9 @@ Item {
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 0.15; color: Theme.specularDim }
-                    GradientStop { position: 0.50; color: Theme.laser }
-                    GradientStop { position: 0.85; color: Theme.specularDim }
+                    GradientStop { position: 0.15; color: Theme.accentWash }
+                    GradientStop { position: 0.50; color: Theme.accent }
+                    GradientStop { position: 0.85; color: Theme.accentWash }
                     GradientStop { position: 1.0; color: "transparent" }
                 }
             }
@@ -123,15 +123,15 @@ Item {
             Rectangle {
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
                 height: 1
-                color: Theme.shadowRim
+                color: Theme.shadow
             }
         }
 
         // Precision Corner Vernier Brackets (1px hairline)
-        Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.left: parent.left;   anchors.top: parent.top }
-        Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.right: parent.right; anchors.top: parent.top }
-        Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.left: parent.left;   anchors.bottom: parent.bottom }
-        Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.right: parent.right; anchors.bottom: parent.bottom }
+        Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left;   anchors.top: parent.top }
+        Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.top: parent.top }
+        Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left;   anchors.bottom: parent.bottom }
+        Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.bottom: parent.bottom }
 
         // Swallows clicks inside panel
         MouseArea { anchors.fill: parent }
@@ -151,7 +151,7 @@ Item {
                 // Glowing Micro-Indicator Pip
                 Rectangle {
                     width: 6; height: 6; radius: 0
-                    color: Theme.laser
+                    color: Theme.accent
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -160,32 +160,11 @@ Item {
                     id: glitchTitle
                     text: panel.title
                     jp: panel.jp
-                    color: Theme.textPrimary
-                    jpColor: Theme.laser
-                    pixelSize: 17
-                    letterSpacing: 2.2
+                    color: Theme.text
+                    jpColor: Theme.accent
+                    pixelSize: Theme.szValue
+                    letterSpacing: Theme.trkWide
                     weight: Font.DemiBold
-                }
-
-                // High-contrast Mode Tag Capsule
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: 18
-                    width: sysTagText.implicitWidth + 12
-                    radius: 0
-                    color: Qt.rgba(Theme.laser.r, Theme.laser.g, Theme.laser.b, 0.12)
-                    border.width: 1
-                    border.color: Theme.specularDim
-
-                    Text {
-                        id: sysTagText
-                        anchors.centerIn: parent
-                        text: "SYS // NOMINAL"
-                        color: Theme.laser
-                        font.family: Theme.fontMono
-                        font.pixelSize: Theme.szNano
-                        font.letterSpacing: 1.0
-                    }
                 }
             }
 
@@ -207,12 +186,12 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                color: Theme.glassBorder
+                color: Theme.edge
             }
             Rectangle {
                 width: 38
                 height: 1
-                color: Theme.laser
+                color: Theme.accent
                 anchors.centerIn: parent
                 opacity: 0.85
             }
@@ -232,29 +211,18 @@ Item {
 
                 Rectangle {
                     width: 5; height: 5; radius: 0
-                    color: Theme.laser
+                    color: Theme.accent
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "READY // 待機  •  " + panel.hint
-                    color: Theme.textSecondary
+                    color: Theme.dim
                     font.family: Theme.fontDisplay
-                    font.pixelSize: Theme.szTail
-                    font.letterSpacing: 1.4
+                    font.pixelSize: Theme.szMicro
+                    font.letterSpacing: Theme.trkLabel
                 }
-            }
-
-            // Right-aligned Telemetry
-            Text {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: "NEURAL DECK // OPTICAL GLASS"
-                color: Theme.textTertiary
-                font.family: Theme.fontMono
-                font.pixelSize: Theme.szNano
-                font.letterSpacing: 1.2
             }
         }
 
@@ -268,12 +236,12 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                color: Theme.glassBorder
+                color: Theme.edge
             }
             Rectangle {
                 width: 30
                 height: 1
-                color: Theme.specularCatch
+                color: Theme.accentEdge
                 anchors.centerIn: parent
                 opacity: 0.5
             }
@@ -300,7 +268,7 @@ Item {
             target: trans
             property: "x"
             to: 0
-            duration: 260
+            duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
 
@@ -309,7 +277,7 @@ Item {
             target: trans
             property: "y"
             to: 0
-            duration: 260
+            duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
 
@@ -319,7 +287,7 @@ Item {
             property: "scale"
             from: 0.965
             to: 1.0
-            duration: 280
+            duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
 
@@ -329,7 +297,7 @@ Item {
             property: "opacity"
             from: 0.0
             to: 1.0
-            duration: 200
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
 
@@ -339,7 +307,7 @@ Item {
             property: "opacity"
             from: 0.0
             to: panel.targetScrimOpacity
-            duration: 220
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
     }

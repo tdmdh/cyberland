@@ -35,6 +35,13 @@ RESTING=$(sed -n '/6. RESTING STATE/,/7. THRESHOLD SENTINELS/p' "$QS/frame/shell
 echo "$RESTING" | grep -q 'Animation.Infinite' \
   && fail "resting mode animates again -- that is ~25 points of GPU, all day"
 
+# 1d. The workspace segment is on screen in every mode, resting included, so
+# the same rule holds for it.
+WS=$(sed -n '/0. WORKSPACE SEGMENT/,/1. OSD MODE/p' "$QS/frame/shell.qml")
+[ -n "$WS" ] || fail "workspace segment markers missing -- check 1d is not checking anything"
+echo "$WS" | grep -q 'Animation.Infinite' \
+  && fail "workspace segment animates -- it is on screen all day"
+
 # 2. The module actually loads -- catches a broken Pip wiring or QML syntax.
 LOG=$(mktemp)
 qs -d -c frame >"$LOG" 2>&1

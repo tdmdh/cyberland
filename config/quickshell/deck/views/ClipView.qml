@@ -10,7 +10,7 @@ Item {
     readonly property string panelTitle: "CLIPBOARD"
     readonly property string panelJp: "切抜"
     readonly property string panelHint: "↑ ↓  MOVE  •  ENTER  COPY  •  CTRL+D  DEL  •  CTRL+W  WIPE  •  ESC  CLOSE"
-    readonly property int panelWidth: 1080
+    readonly property int panelWidth: Theme.panelM
     readonly property int panelHeight: 640
     readonly property string placement: "center"
 
@@ -161,7 +161,7 @@ Item {
                 color: view.query === "" ? Theme.dim : Theme.text
                 font.family: view.query === "" ? Theme.fontDisplay : Theme.fontMono
                 font.pixelSize: view.query === "" ? Theme.szBody : Theme.szValue
-                font.letterSpacing: view.query === "" ? 3 : 0.5
+                font.letterSpacing: view.query === "" ? Theme.trkWide : Theme.trkTight
                 elide: Text.ElideRight
             }
 
@@ -199,7 +199,7 @@ Item {
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: Theme.glassBorder }
+        Rectangle { width: parent.width; height: 1; color: Theme.edge }
 
         // Entries List View
         Item {
@@ -226,9 +226,9 @@ Item {
 
                     readonly property bool sel: index === list.currentIndex
 
-                    color: row.sel ? Theme.glassCard : (rowMouse.containsMouse ? Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.25) : "transparent")
+                    color: row.sel ? Theme.card : (rowMouse.containsMouse ? Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.25) : "transparent")
                     border.width: 1
-                    border.color: row.sel ? Theme.glassBorder : "transparent"
+                    border.color: row.sel ? Theme.edge : "transparent"
 
                     // Top specular catch
                     Rectangle {
@@ -236,7 +236,7 @@ Item {
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
                         visible: row.sel
-                        color: Theme.specularCatch
+                        color: Theme.accentEdge
                     }
 
                     // Left accent spine
@@ -255,9 +255,9 @@ Item {
                         anchors.leftMargin: 16
                         width: 34
                         text: ("0" + (row.index + 1)).slice(-2)
-                        color: row.sel ? Theme.accent : Theme.line
+                        color: row.sel ? Theme.accent : Theme.dim
                         font.family: Theme.fontMono
-                        font.pixelSize: Theme.szTail
+                        font.pixelSize: Theme.szMicro
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -300,7 +300,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "空"
-                    color: Theme.line
+                    color: Theme.dim
                     font.family: Theme.fontJP
                     font.pixelSize: Theme.szMicro
                 }

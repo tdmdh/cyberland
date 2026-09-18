@@ -10,7 +10,7 @@ Item {
     readonly property string panelTitle: "NOTIFICATIONS"
     readonly property string panelJp: "通知"
     readonly property string panelHint: "D  DO NOT DISTURB  •  C  CLEAR ALL  •  ↑ ↓  NAVIGATE  •  DEL/X  DISMISS  •  ESC  CLOSE"
-    readonly property int panelWidth: 840
+    readonly property int panelWidth: Theme.panelS
     readonly property int panelHeight: 880
     readonly property string placement: "right"
     readonly property bool fullBleed: false
@@ -159,10 +159,10 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: view.dnd ? "静音モード有効" : "通知なし • 全てクリア"
-                color: Theme.line
+                color: Theme.dim
                 font.family: Theme.fontJP
                 font.pixelSize: Theme.szMicro
-                font.letterSpacing: 1.2
+                font.letterSpacing: Theme.trkLabel
             }
         }
 
@@ -195,10 +195,10 @@ Item {
 
                     color: rowMouse.containsMouse || row.isSelected ? Theme.layer1 : "transparent"
                     border.width: 1
-                    border.color: row.crit ? Theme.alert : (rowMouse.containsMouse || row.isSelected ? Theme.glassBorder : "transparent")
+                    border.color: row.crit ? Theme.alert : (rowMouse.containsMouse || row.isSelected ? Theme.edge : "transparent")
 
-                    Behavior on color { ColorAnimation { duration: 110 } }
-                    Behavior on border.color { ColorAnimation { duration: 110 } }
+                    Behavior on color { ColorAnimation { duration: Theme.easeFastMs } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.easeFastMs } }
 
                     // Critical or active urgency spine indicator
                     Rectangle {
@@ -239,7 +239,7 @@ Item {
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: row.modelData.timeAgo || ""
-                                    color: Theme.line
+                                    color: Theme.dim
                                     font.family: Theme.fontMono
                                     font.pixelSize: Theme.szMicro
                                 }
@@ -248,9 +248,9 @@ Item {
                                     id: closeBtn
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "✕"
-                                    color: closeMouse.containsMouse ? Theme.alert : Theme.line2
+                                    color: closeMouse.containsMouse ? Theme.alert : Theme.dim
                                     font.family: Theme.fontMono
-                                    font.pixelSize: Theme.szTail
+                                    font.pixelSize: Theme.szMicro
 
                                     MouseArea {
                                         id: closeMouse
@@ -272,7 +272,7 @@ Item {
                             color: row.crit ? Theme.alert : Theme.text
                             font.family: Theme.fontDisplay
                             font.pixelSize: Theme.szBody + 2
-                            font.letterSpacing: 0.4
+                            font.letterSpacing: Theme.trkTight
                             font.weight: Font.Medium
                             elide: Text.ElideRight
                             maximumLineCount: 1

@@ -21,25 +21,25 @@ Rectangle {
     scale: !btn.enabled ? 1.0 : (mouseArea.pressed ? 0.962 : (mouseArea.containsMouse ? 1.015 : 1.0))
     Behavior on scale {
         NumberAnimation {
-            duration: mouseArea.pressed ? Theme.tapSnapMs : 160
-            easing.type: mouseArea.pressed ? Easing.OutQuad : Easing.OutBack
+            duration: mouseArea.pressed ? Theme.tapSnapMs : Theme.easeMs
+            easing.type: mouseArea.pressed ? Easing.OutQuad : Easing.OutCubic
         }
     }
 
     // Smoked sapphire glass chassis
     color: !btn.enabled ? Qt.rgba(Theme.layer1.r, Theme.layer1.g, Theme.layer1.b, 0.35)
          : (btn.active ? btn.tint
-         : (mouseArea.pressed ? Theme.glassPressed
-         : (mouseArea.containsMouse ? Theme.glassElevated : Theme.glassCard)))
+         : (mouseArea.pressed ? Theme.cardPressed
+         : (mouseArea.containsMouse ? Theme.cardHover : Theme.card)))
 
     border.width: 1
     border.color: !btn.enabled ? Theme.line2
                 : (btn.active ? btn.tint
-                : (mouseArea.containsMouse ? Theme.specularCatch : Theme.glassBorder))
+                : (mouseArea.containsMouse ? Theme.accentEdge : Theme.edge))
     opacity: btn.enabled ? 1.0 : 0.45
 
-    Behavior on color { ColorAnimation { duration: 110 } }
-    Behavior on border.color { ColorAnimation { duration: 110 } }
+    Behavior on color { ColorAnimation { duration: Theme.easeFastMs } }
+    Behavior on border.color { ColorAnimation { duration: Theme.easeFastMs } }
 
     // Top specular light catch (Apple glass optical reflection)
     Rectangle {
@@ -89,10 +89,10 @@ Rectangle {
             id: label
             anchors.verticalCenter: parent.verticalCenter
             text: btn.text
-            color: btn.active ? Theme.onAccent : Theme.textPrimary
+            color: btn.active ? Theme.onAccent : Theme.text
             font.family: Theme.fontDisplay
             font.pixelSize: Theme.szBody
-            font.letterSpacing: 1.2
+            font.letterSpacing: Theme.trkLabel
             font.weight: btn.active ? Font.DemiBold : Font.Medium
         }
 
@@ -104,7 +104,7 @@ Rectangle {
             color: btn.active ? Theme.onAccent : btn.tint
             opacity: btn.active ? 0.90 : Theme.opacityJP
             font.family: Theme.fontJP
-            font.pixelSize: Theme.szNano
+            font.pixelSize: Theme.szMicro
             font.weight: Theme.weightJP
         }
     }

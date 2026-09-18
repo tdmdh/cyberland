@@ -39,6 +39,7 @@ hl.bind(mod .. " + W", panel("palette"), d("theme & wallpaper studio"))
 hl.bind(mod .. " + H", panel("sensor"), d("hardware sensors & avionics"))
 hl.bind(mod .. " + Y", panel("cyberpad"), d("cyberdeck scratchpad console"))
 hl.bind(mod .. " + M", panel("music"), d("cyberdeck music player"))
+hl.bind(mod .. " + S", panel("spectrum"), d("spectrum audio & volume console"))
 hl.bind(mod .. " + X", panel("schematic"), d("schematic vector studio"))
 hl.bind(mod .. " + slash", panel("keys"), d("keybind cheatsheet"))
 
@@ -265,13 +266,24 @@ hl.bind(mod .. " + ALT + mouse_up", zoom(0.5), d("zoom out"))
 -- Native tools, not the Volume.sh / MediaCtrl.sh wrappers.
 hl.bind(
 	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"),
+	hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"),
 	{ locked = true, repeating = true, description = "volume up" }
 )
 hl.bind(
 	"XF86AudioLowerVolume",
 	hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
 	{ locked = true, repeating = true, description = "volume down" }
+)
+-- Fallback volume keys for keyboards without dedicated media keys
+hl.bind(
+	mod .. " + equal",
+	hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"),
+	{ repeating = true, description = "volume up" }
+)
+hl.bind(
+	mod .. " + minus",
+	hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
+	{ repeating = true, description = "volume down" }
 )
 hl.bind(
 	"XF86AudioMute",

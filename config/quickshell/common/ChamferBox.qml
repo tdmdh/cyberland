@@ -55,7 +55,7 @@ Item {
 
         // Top laser edge rim highlight (photonic top-glass catch)
         ShapePath {
-            strokeColor: Theme.laserEdgeSubtle
+            strokeColor: Theme.accentWash
             strokeWidth: 1
             fillColor: "transparent"
 

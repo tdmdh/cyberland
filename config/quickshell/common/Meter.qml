@@ -53,9 +53,9 @@ Row {
             }
 
             // Unlit segments sit in a recessed dark glass socket; lit segments emit photonic laser light
-            color: seg.isLit ? m.barColor : Theme.socketBg
+            color: seg.isLit ? m.barColor : Theme.socket
             border.width: 1
-            border.color: seg.isLit ? Qt.tint(m.barColor, "#30FFFFFF") : Theme.glassBorder
+            border.color: seg.isLit ? Qt.tint(m.barColor, "#30FFFFFF") : Theme.edge
 
             Behavior on color { ColorAnimation { duration: Theme.snapMs } }
             Behavior on border.color { ColorAnimation { duration: Theme.snapMs } }

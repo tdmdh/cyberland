@@ -15,6 +15,11 @@
 // focus while it is up, because the alternative is a password landing in
 // whatever terminal is underneath.
 //
+// It is also sudo's password card. Dev-session terminals open on silent
+// workspaces, so a tty prompt there waits where nobody is looking;
+// hypr/bin/sudo-shim puts `sudo -A` in front of them and hypr/bin/qs-askpass
+// queues the prompt here instead. See the askpass block below.
+//
 //   run: qs -d -c auth
 import QtQuick
 import Quickshell
@@ -30,13 +35,68 @@ ShellRoot {
 
     readonly property var flow: agent.flow
 
+    // ---- sudo askpass: the second door into this card --------------------
+    // hypr/bin/qs-askpass is sudo's SUDO_ASKPASS helper. It registers a
+    // request here over IPC, then blocks reading a FIFO until this card
+    // writes the answer into it.
+    //
+    // A queue, not a slot: a dev session opens several terminals at once and
+    // sudo caches credentials per tty, so each of them asks on its own.
+    property var asks: []
+    readonly property var pending: root.asks.length > 0 ? root.asks[0] : null
+    // polkit first. polkitd owns that flow and times it out on its own clock;
+    // a sudo request just waits its turn.
+    readonly property bool askMode: !agent.isActive && root.pending !== null
+    // sudo retries a rejected password by running the helper again from the
+    // same sudo process. Same pid as the last answer = the last answer was wrong.
+    property int lastAnsweredPid: -1
+
+    // One writer per answer, handed the secret on stdin -- never argv, which
+    // any process can read from /proc. `[ -p ]` so a request whose helper has
+    // already gone (FIFO dir removed) fails to open rather than creating a
+    // regular file with the password in it; timeout so a writer can never sit
+    // blocked on a pipe nobody reads. Empty secret = cancel: close, write nothing.
+    Component {
+        id: writer
+        Process {
+            required property string fifo
+            property string secret: ""
+            command: ["timeout", "5", "sh", "-c", '[ -p "$1" ] && exec cat > "$1"', "sh", fifo]
+            stdinEnabled: true
+            onStarted: {
+                if (secret.length > 0) write(secret + "\n");
+                secret = "";
+                stdinEnabled = false;
+            }
+            onExited: destroy()
+            Component.onCompleted: running = true
+        }
+    }
+
+    function answerAsk(secret: string): void {
+        const a = root.pending;
+        if (!a) return;
+        writer.createObject(root, { fifo: a.fifo, secret: secret });
+        root.lastAnsweredPid = secret.length > 0 ? a.pid : -1;
+        root.asks = root.asks.slice(1);
+    }
+
     function submit(): void {
+        if (root.askMode) {
+            // An empty Enter is a slip, not an answer: sudo would take it as
+            // "no password" and give up on the command.
+            if (root.entry.length === 0) return;
+            root.answerAsk(root.entry);
+            root.entry = "";
+            return;
+        }
         if (!root.flow || !root.flow.isResponseRequired) return;
         root.flow.submit(root.entry);
         root.entry = "";
     }
 
     function cancel(): void {
+        if (root.askMode) { root.answerAsk(""); root.entry = ""; return; }
         if (root.flow) root.flow.cancelAuthenticationRequest();
         root.entry = "";
     }
@@ -62,13 +122,27 @@ ShellRoot {
         function status(): string {
             return JSON.stringify({ registered: agent.isRegistered,
                                     active: agent.isActive,
-                                    action: root.flow ? root.flow.actionId : "" });
+                                    action: root.flow ? root.flow.actionId : "",
+                                    asks: root.asks.length });
+        }
+
+        // Called by hypr/bin/qs-askpass, once per sudo prompt. Nothing secret
+        // crosses here -- only what to display, and where to write the answer.
+        function ask(prompt: string, command: string, terminal: string, pid: int, fifo: string): void {
+            root.asks = root.asks.concat([{ prompt: prompt, command: command,
+                                            terminal: terminal, pid: pid, fifo: fifo,
+                                            retry: pid === root.lastAnsweredPid }]);
+        }
+
+        // The helper gave up (timeout, Ctrl-C in its terminal): stop showing it.
+        function drop(fifo: string): void {
+            root.asks = root.asks.filter(a => a.fifo !== fifo);
         }
     }
 
     PanelWindow {
         id: win
-        visible: agent.isActive
+        visible: agent.isActive || root.pending !== null
 
         WlrLayershell.namespace: "quickshell:auth"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -89,11 +163,13 @@ ShellRoot {
 
             headerItems: [
                 DynamicPill {
-                    label: "POLKIT"
+                    label: root.askMode ? "SUDO" : "POLKIT"
                     jp: "権限"
-                    value: agent.isRegistered ? "READY" : "UNREG"
-                    subValue: "AUTHORITY"
-                    tint: agent.isRegistered ? Theme.laser : Theme.alert
+                    value: root.askMode
+                           ? (root.asks.length > 1 ? root.asks.length + " QUEUED" : "ASKPASS")
+                           : (agent.isRegistered ? "READY" : "UNREG")
+                    subValue: root.askMode ? "TERMINAL" : "AUTHORITY"
+                    tint: (root.askMode || agent.isRegistered) ? Theme.accent : Theme.alert
                     anchors.verticalCenter: parent.verticalCenter
                 }
             ]
@@ -107,20 +183,25 @@ ShellRoot {
                 // you are about to grant is how people click through prompts.
                 Text {
                     width: parent.width
-                    text: root.flow ? root.flow.message : ""
+                    text: root.askMode
+                          ? root.pending.terminal + " is asking for your sudo password"
+                          : (root.flow ? root.flow.message : "")
                     color: Theme.text
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szValue
-                    font.letterSpacing: 0.4
+                    font.letterSpacing: Theme.trkTight
                     wrapMode: Text.WordWrap
                 }
 
                 Text {
                     width: parent.width
-                    text: root.flow ? root.flow.actionId : ""
+                    // sudo's own argv, verbatim, for the same reason polkit's
+                    // sentence is: this line is what you are about to allow.
+                    text: root.askMode ? root.pending.command
+                                       : (root.flow ? root.flow.actionId : "")
                     color: Theme.dim
                     font.family: Theme.fontMono
-                    font.pixelSize: Theme.szTail
+                    font.pixelSize: Theme.szMicro
                     elide: Text.ElideMiddle
                 }
 
@@ -130,17 +211,17 @@ ShellRoot {
                     width: parent.width
                     height: 46
                     radius: 0
-                    color: Theme.glassCard
+                    color: Theme.card
                     border.width: 1
-                    border.color: fail.on ? Theme.alert : Theme.glassBorder
-                    visible: !!root.flow && root.flow.isResponseRequired
+                    border.color: fail.on ? Theme.alert : Theme.edge
+                    visible: root.askMode || (!!root.flow && root.flow.isResponseRequired)
 
                     // Top specular catch
                     Rectangle {
                         anchors { top: parent.top; left: parent.left; right: parent.right }
                         anchors.leftMargin: 1; anchors.rightMargin: 1
                         height: 1
-                        color: Theme.specularDim
+                        color: Theme.accentWash
                     }
 
                     Row {
@@ -156,7 +237,9 @@ ShellRoot {
                     Text {
                         anchors.centerIn: parent
                         visible: root.entry.length === 0
-                        text: (root.flow && root.flow.inputPrompt
+                        text: (root.askMode
+                               ? root.pending.prompt.replace(/^\[sudo\]\s*/, "").replace(/:\s*$/, "").toUpperCase()
+                               : root.flow && root.flow.inputPrompt
                                ? root.flow.inputPrompt.replace(/:\s*$/, "").toUpperCase()
                                : "PASSWORD") + "  合言葉"
                         color: Theme.dim
@@ -173,7 +256,7 @@ ShellRoot {
                         anchors.fill: parent
                         opacity: 0
                         focus: true
-                        echoMode: (root.flow && root.flow.responseVisible)
+                        echoMode: (!root.askMode && root.flow && root.flow.responseVisible)
                                   ? TextInput.Normal : TextInput.Password
                         text: root.entry
                         onTextChanged: root.entry = text
@@ -187,14 +270,19 @@ ShellRoot {
                 // because colour in this design only ever means "wrong".
                 Text {
                     id: fail
-                    readonly property bool on: !!root.flow && root.flow.supplementaryIsError
+                    // In sudo mode the one thing to report is a rejection. sudo
+                    // prints "Sorry, try again" into the terminal, which is
+                    // exactly where nobody is looking.
+                    readonly property bool retry: root.askMode && root.pending.retry
+                    readonly property bool on: retry || (!root.askMode && !!root.flow && root.flow.supplementaryIsError)
                     width: parent.width
-                    visible: !!root.flow && root.flow.supplementaryMessage !== ""
-                    text: root.flow ? root.flow.supplementaryMessage.toUpperCase() : ""
+                    visible: retry || (!root.askMode && !!root.flow && root.flow.supplementaryMessage !== "")
+                    text: retry ? "SUDO DID NOT ACCEPT THAT PASSWORD. TRY AGAIN."
+                                : (root.flow ? root.flow.supplementaryMessage.toUpperCase() : "")
                     color: fail.on ? Theme.alert : Theme.dim
                     font.family: Theme.fontDisplay
                     font.pixelSize: Theme.szBody
-                    font.letterSpacing: 2
+                    font.letterSpacing: Theme.trkLabel
                     wrapMode: Text.WordWrap
                 }
 
@@ -202,7 +290,7 @@ ShellRoot {
                     spacing: 10
                     Btn {
                         text: "AUTHORIZE"; jp: "許可"
-                        enabled: !!root.flow && root.flow.isResponseRequired
+                        enabled: root.askMode || (!!root.flow && root.flow.isResponseRequired)
                         onClicked: root.submit()
                     }
                     Btn {

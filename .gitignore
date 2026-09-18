@@ -5,3 +5,7 @@ config/hypr/conf/monitors_local.lua
 config/nvim/lazy-lock.json.bak
 *.bak
 *.orig
+__pycache__/
+
+# Built by install.sh from config/hypr/src/fileindex.
+config/hypr/bin/fileindex

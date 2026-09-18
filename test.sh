@@ -27,6 +27,8 @@ for p in .config/hypr/hyprland.lua \
          .config/hypr/bin/tokyo-palette \
          .config/quickshell/deck/shell.qml \
          .config/quickshell/deck/views/common/Theme.qml \
+         .config/quickshell/deck/views/rank.js \
+         .config/hypr/src/fileindex/main.go \
          .config/kitty/kitty-themes/01-Wallust.conf \
          .config/superfile/theme/wallust.toml \
          .config/starship.toml \

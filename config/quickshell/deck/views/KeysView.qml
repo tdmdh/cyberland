@@ -10,15 +10,15 @@ Item {
     readonly property string panelTitle: "KEYBINDS"
     readonly property string panelJp: "割当"
     readonly property string panelHint: "TYPE  FILTER       ESC  CLOSE"
-    readonly property int panelWidth: 1360
-    readonly property int panelHeight: 520
-    readonly property string placement: "bottom"
+    readonly property int panelWidth: Theme.panelM
+    readonly property int panelHeight: 720
+    readonly property string placement: "center"
 
     signal closeRequested()
 
     property var binds: []
     property string query: ""
-    readonly property int columns: 3
+    readonly property int columns: 2
 
     function onActivated(): void {
         view.query = "";
@@ -102,7 +102,7 @@ Item {
                 jp: "表示"
                 value: view.shown.length + ""
                 subValue: "OF " + view.binds.length
-                tint: view.shown.length === 0 ? Theme.alert : Theme.laser
+                tint: view.shown.length === 0 ? Theme.alert : Theme.accent
             }
         }
     }
@@ -125,7 +125,7 @@ Item {
                 text: "/"
                 color: Theme.accent
                 font.family: Theme.fontMono
-                font.pixelSize: 15
+                font.pixelSize: Theme.szValue
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
@@ -134,8 +134,8 @@ Item {
                 text: view.query === "" ? "FILTER KEYBIND  絞込" : view.query
                 color: view.query === "" ? Theme.dim : Theme.text
                 font.family: view.query === "" ? Theme.fontDisplay : Theme.fontMono
-                font.pixelSize: 13
-                font.letterSpacing: view.query === "" ? 2 : 0.5
+                font.pixelSize: Theme.szBody
+                font.letterSpacing: view.query === "" ? Theme.trkLabel : Theme.trkTight
             }
 
             TextInput {
@@ -154,63 +154,74 @@ Item {
 
         Rectangle { width: parent.width; height: 1; color: Theme.line2 }
 
-        // 3-Column Keybind Grid
-        Row {
+        // Keybind grid. Scrolls: 130 binds never fit, and without this
+        // everything past the first screenful was simply cut off.
+        Flickable {
             width: parent.width
-            spacing: 18
+            height: parent.height - y
+            contentWidth: width
+            contentHeight: grid.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
 
-            Repeater {
-                model: view.columns
+            Row {
+                id: grid
+                width: parent.width
+                spacing: 18
 
-                Column {
-                    required property int index
-                    width: (parent.width - 18 * (view.columns - 1)) / view.columns
-                    spacing: 4
+                Repeater {
+                    model: view.columns
 
-                    Repeater {
-                        model: view.slice(parent.index)
+                    Column {
+                        required property int index
+                        width: (parent.width - 18 * (view.columns - 1)) / view.columns
+                        spacing: 4
 
-                        Item {
-                            required property var modelData
-                            width: parent.width
-                            height: 22
+                        Repeater {
+                            model: view.slice(parent.index)
 
-                            Rectangle {
-                                id: chordPill
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: parent.left
-                                width: Math.min(parent.width * 0.44, chordText.implicitWidth + 14)
-                                height: 18
-                                radius: 0
-                                color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.4)
-                                border.width: 1
-                                border.color: Theme.glassBorder
+                            Item {
+                                required property var modelData
+                                width: parent.width
+                                height: 22
+
+                                Rectangle {
+                                    id: chordPill
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: parent.left
+                                    width: Math.min(parent.width * 0.44, chordText.implicitWidth + 14)
+                                    height: 18
+                                    radius: 0
+                                    color: Qt.rgba(Theme.layer2.r, Theme.layer2.g, Theme.layer2.b, 0.4)
+                                    border.width: 1
+                                    border.color: Theme.edge
+
+                                    Text {
+                                        id: chordText
+                                        anchors.centerIn: parent
+                                        text: modelData.chord
+                                        color: Theme.accent
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: Theme.szMicro
+                                        font.weight: Font.Bold
+                                        elide: Text.ElideRight
+                                        width: parent.width - 6
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                }
 
                                 Text {
-                                    id: chordText
-                                    anchors.centerIn: parent
-                                    text: modelData.chord
-                                    color: Theme.accent
-                                    font.family: Theme.fontMono
-                                    font.pixelSize: 10
-                                    font.weight: Font.Bold
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: chordPill.right
+                                    anchors.leftMargin: 10
+                                    anchors.right: parent.right
+                                    text: modelData.desc
+                                    color: Theme.text
+                                    font.family: Theme.fontDisplay
+                                    font.pixelSize: Theme.szBody
+                                    font.letterSpacing: Theme.trkLabel
                                     elide: Text.ElideRight
-                                    width: parent.width - 6
-                                    horizontalAlignment: Text.AlignHCenter
                                 }
-                            }
-
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: chordPill.right
-                                anchors.leftMargin: 10
-                                anchors.right: parent.right
-                                text: modelData.desc
-                                color: Theme.text
-                                font.family: Theme.fontDisplay
-                                font.pixelSize: 11
-                                font.letterSpacing: 1.2
-                                elide: Text.ElideRight
                             }
                         }
                     }

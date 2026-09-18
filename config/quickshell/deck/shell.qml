@@ -1,15 +1,13 @@
+//@ pragma IconTheme breeze-dark
 // Unified Modal Deck Host: Apple x Cyberpunk Floating Neural-Glass Morphism Deck.
 //
 // Consolidates floating modal panels into a single, high-performance Quickshell daemon
-// with a persistent glass chassis that physically glides and morphs across the display
-// with physical Apple spring dynamics (Easing.OutBack).
+// with a persistent glass chassis that glides and resizes between views
+// (Easing.OutCubic; bounce is reserved for the island).
 //
-// Supported panels:
-//   - "control"   (center, 1080x560)  Volume, Media, Wifi, Bluetooth, Power
-//   - "music"     (center, 920x330)   Cyberdeck Audio Player, MPRIS, Spectrum Analyzer
-//   - "cyberpad"  (top, 960x420)      Quick-drop scratchpad console & hex editor
-//   - "keys"      (bottom, 1280x460)  Keybind cheatsheet grid & search
-//   - "agent"     (center, 1080x580)  Agent activity & token telemetry
+// Panels are the views/ files; bin/qs-panel lists the ids. Each is Theme.panelS,
+// Theme.panelM or fullBleed wide, centred (notify sits right), and either a
+// fixed panelHeight or -1 to fit its content.
 //
 // IPC Interface:
 //   qs -c deck ipc call deck toggle <panelName>
@@ -65,6 +63,7 @@ ShellRoot {
         const place = item ? item.placement : "center";
         if (place === "top") sy = -40;
         else if (place === "bottom") sy = 40;
+        else if (place === "spotlight") sy = -12;
 
         chassis.scale = 0.965;
         chassis.opacity = 0.0;
@@ -91,6 +90,7 @@ ShellRoot {
         root.ensureLoader(id);
         const item = root.getView(id);
         root.activeView = item;
+        scrimRect.opacity = root.targetScrim;
 
         // Crossfade content smoothly
         crossfadeAnim.restart();
@@ -122,6 +122,7 @@ ShellRoot {
         else if (id === "schematic") loaderSchematic.active = true;
         else if (id === "launcher") loaderLauncher.active = true;
         else if (id === "notify") loaderNotify.active = true;
+        else if (id === "spectrum") loaderSpectrum.active = true;
     }
 
     // ---- IPC Handler -----------------------------------------------------
@@ -169,7 +170,21 @@ ShellRoot {
 
     readonly property bool targetFullBleed: root.activeView ? !!root.activeView.fullBleed : false
     readonly property int targetW: root.activeView ? (targetFullBleed ? winW - 96 : root.activeView.panelWidth) : 1080
-    readonly property int targetH: root.activeView ? (targetFullBleed ? winH - 96 : root.activeView.panelHeight) : 560
+    // A view may opt out of the deck's framing:
+    //   bare: true    no title, rules or footer; the view fills the chassis
+    //   scrim: false  leave the desktop undimmed (clicks outside still close)
+    readonly property bool targetBare: root.activeView ? !!root.activeView.bare : false
+    readonly property real targetScrim: root.activeView && root.activeView.scrim === false ? 0.0 : 0.60
+
+    // panelHeight -1 = fit the view's implicitHeight, as Panel.qml's -1 does.
+    // chrome is everything around bodySlot: 22+28+12+1+14 above, 14+1+12+20+22 below.
+    readonly property int chrome: root.targetBare ? 0 : 146
+    readonly property int targetH: {
+        if (!root.activeView) return 560;
+        if (targetFullBleed) return winH - 96;
+        const h = root.activeView.panelHeight;
+        return h > 0 ? h : Math.min(root.activeView.implicitHeight + root.chrome, winH - 96);
+    }
     readonly property string targetPlacement: root.activeView ? (root.activeView.placement || "center") : "center"
 
     readonly property real targetX: {
@@ -180,6 +195,9 @@ ShellRoot {
 
     readonly property real targetY: {
         if (targetPlacement === "top") return 48;
+        // Fixed top edge, so a view that grows (the launcher as results
+        // arrive) grows downward instead of re-centring.
+        if (targetPlacement === "spotlight") return Math.round(winH * 0.22);
         if (targetPlacement === "bottom") return winH - targetH - 48;
         return (winH - targetH) / 2;
     }
@@ -202,11 +220,11 @@ ShellRoot {
         Rectangle {
             id: scrimRect
             anchors.fill: parent
-            color: Theme.obsidianBase
+            color: Theme.bg
             opacity: 0.0
 
             Behavior on opacity {
-                NumberAnimation { duration: 240; easing.type: Easing.OutQuad }
+                NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutQuad }
             }
 
             MouseArea {
@@ -252,33 +270,29 @@ ShellRoot {
             Behavior on x {
                 enabled: root.isOpen && !openAnim.running
                 NumberAnimation {
-                    duration: 360
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.14
+                    duration: Theme.morphMs
+                    easing.type: Easing.OutCubic
                 }
             }
             Behavior on y {
                 enabled: root.isOpen && !openAnim.running
                 NumberAnimation {
-                    duration: 360
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.14
+                    duration: Theme.morphMs
+                    easing.type: Easing.OutCubic
                 }
             }
             Behavior on width {
                 enabled: root.isOpen && !openAnim.running
                 NumberAnimation {
-                    duration: 340
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.12
+                    duration: Theme.morphMs
+                    easing.type: Easing.OutCubic
                 }
             }
             Behavior on height {
                 enabled: root.isOpen && !openAnim.running
                 NumberAnimation {
-                    duration: 340
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.12
+                    duration: Theme.morphMs
+                    easing.type: Easing.OutCubic
                 }
             }
 
@@ -286,9 +300,9 @@ ShellRoot {
             Rectangle {
                 anchors.fill: parent
                 radius: 0
-                color: Theme.glassCard
+                color: Theme.card
                 border.width: 1
-                border.color: Theme.glassBorder
+                border.color: Theme.edge
 
                 // Top specular laser light catch
                 Rectangle {
@@ -299,9 +313,9 @@ ShellRoot {
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 0.15; color: Theme.specularDim }
-                        GradientStop { position: 0.50; color: Theme.laser }
-                        GradientStop { position: 0.85; color: Theme.specularDim }
+                        GradientStop { position: 0.15; color: Theme.accentWash }
+                        GradientStop { position: 0.50; color: Theme.accent }
+                        GradientStop { position: 0.85; color: Theme.accentWash }
                         GradientStop { position: 1.0; color: "transparent" }
                     }
                 }
@@ -310,7 +324,7 @@ ShellRoot {
                 Rectangle {
                     anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
                     height: 1
-                    color: Theme.shadowRim
+                    color: Theme.shadow
                 }
 
                 // Swallows clicks inside chassis and restores active focus
@@ -321,16 +335,17 @@ ShellRoot {
             }
 
             // Precision Corner Vernier Brackets
-            Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.left: parent.left; anchors.top: parent.top }
-            Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.right: parent.right; anchors.top: parent.top }
-            Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.left: parent.left; anchors.bottom: parent.bottom }
-            Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.specularCatch; anchors.right: parent.right; anchors.bottom: parent.bottom }
+            Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left; anchors.top: parent.top }
+            Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.top: parent.top }
+            Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left; anchors.bottom: parent.bottom }
+            Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.bottom: parent.bottom }
 
             // ---- Header --------------------------------------------------
             Item {
                 id: header
                 anchors { top: parent.top; left: parent.left; right: parent.right; margins: 22 }
                 height: 28
+                visible: !root.targetBare
 
                 Row {
                     anchors.left: parent.left
@@ -340,10 +355,13 @@ ShellRoot {
                     // Glowing Micro-Indicator Pip
                     Rectangle {
                         width: 6; height: 6; radius: 0
-                        color: Theme.laser
+                        color: Theme.accent
                         anchors.verticalCenter: parent.verticalCenter
 
+                        // Gated: ungated it ticked whenever the deck process
+                        // lived, open or not, and under a hidden header.
                         SequentialAnimation on opacity {
+                            running: win.visible && header.visible
                             loops: Animation.Infinite
                             NumberAnimation { to: 0.35; duration: 900; easing.type: Easing.InOutQuad }
                             NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutQuad }
@@ -355,32 +373,11 @@ ShellRoot {
                         id: titleGlitch
                         text: root.activeView ? root.activeView.panelTitle : "DECK"
                         jp: root.activeView ? root.activeView.panelJp : "卓"
-                        color: Theme.textPrimary
-                        jpColor: Theme.laser
-                        pixelSize: 17
-                        letterSpacing: 2.2
+                        color: Theme.text
+                        jpColor: Theme.accent
+                        pixelSize: Theme.szValue
+                        letterSpacing: Theme.trkWide
                         weight: Font.DemiBold
-                    }
-
-                    // System Mode Tag Capsule
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: 18
-                        width: sysTagText.implicitWidth + 12
-                        radius: 0
-                        color: Qt.rgba(Theme.laser.r, Theme.laser.g, Theme.laser.b, 0.12)
-                        border.width: 1
-                        border.color: Theme.specularDim
-
-                        Text {
-                            id: sysTagText
-                            anchors.centerIn: parent
-                            text: "SYS // NOMINAL"
-                            color: Theme.laser
-                            font.family: Theme.fontMono
-                            font.pixelSize: Theme.szNano
-                            font.letterSpacing: 1.0
-                        }
                     }
                 }
 
@@ -398,11 +395,12 @@ ShellRoot {
                 id: ruleTop
                 anchors { top: header.bottom; topMargin: 12; left: parent.left; right: parent.right; leftMargin: 22; rightMargin: 22 }
                 height: 1
+                visible: !root.targetBare
 
-                Rectangle { anchors.fill: parent; color: Theme.glassBorder }
+                Rectangle { anchors.fill: parent; color: Theme.edge }
                 Rectangle {
                     width: 30; height: 1
-                    color: Theme.laser
+                    color: Theme.accent
                     anchors.centerIn: parent
                     opacity: 0.7
                 }
@@ -412,14 +410,14 @@ ShellRoot {
             Item {
                 id: bodySlot
                 anchors {
-                    top: ruleTop.bottom
-                    bottom: ruleBottom.top
+                    top: root.targetBare ? parent.top : ruleTop.bottom
+                    bottom: root.targetBare ? parent.bottom : ruleBottom.top
                     left: parent.left
                     right: parent.right
-                    topMargin: 14
-                    bottomMargin: 14
-                    leftMargin: 22
-                    rightMargin: 22
+                    topMargin: root.targetBare ? 0 : 14
+                    bottomMargin: root.targetBare ? 0 : 14
+                    leftMargin: root.targetBare ? 0 : 22
+                    rightMargin: root.targetBare ? 0 : 22
                 }
                 clip: true
 
@@ -702,6 +700,23 @@ ShellRoot {
                         }
                     }
                 }
+
+                Loader {
+                    id: loaderSpectrum
+                    anchors.fill: parent
+                    active: false
+                    asynchronous: false
+                    sourceComponent: SpectrumView {}
+                    opacity: root.activePanelId === "spectrum" ? 1.0 : 0.0
+                    visible: opacity > 0.01
+                    onLoaded: {
+                        root.viewCache["spectrum"] = item;
+                        if (root.activePanelId === "spectrum") {
+                            root.activeView = item;
+                            root.restoreFocus();
+                        }
+                    }
+                }
             }
 
             // Bottom Division Rule
@@ -709,11 +724,12 @@ ShellRoot {
                 id: ruleBottom
                 anchors { bottom: footer.top; bottomMargin: 12; left: parent.left; right: parent.right; leftMargin: 22; rightMargin: 22 }
                 height: 1
+                visible: !root.targetBare
 
-                Rectangle { anchors.fill: parent; color: Theme.glassBorder }
+                Rectangle { anchors.fill: parent; color: Theme.edge }
                 Rectangle {
                     width: 30; height: 1
-                    color: Theme.specularCatch
+                    color: Theme.accentEdge
                     anchors.centerIn: parent
                     opacity: 0.5
                 }
@@ -724,6 +740,7 @@ ShellRoot {
                 id: footer
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: 22 }
                 height: 20
+                visible: !root.targetBare
 
                 Row {
                     anchors.left: parent.left
@@ -738,21 +755,11 @@ ShellRoot {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "READY // 待機  •  " + (root.activeView ? root.activeView.panelHint : "ESC CLOSE")
-                        color: Theme.textSecondary
+                        color: Theme.dim
                         font.family: Theme.fontDisplay
-                        font.pixelSize: Theme.szTail
-                        font.letterSpacing: 1.4
+                        font.pixelSize: Theme.szMicro
+                        font.letterSpacing: Theme.trkLabel
                     }
-                }
-
-                Text {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "NEURAL DECK // OPTICAL GLASS"
-                    color: Theme.textTertiary
-                    font.family: Theme.fontMono
-                    font.pixelSize: Theme.szNano
-                    font.letterSpacing: 1.2
                 }
             }
         }
@@ -769,7 +776,7 @@ ShellRoot {
             property: "opacity"
             from: 0.35
             to: 1.0
-            duration: 220
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
         NumberAnimation {
@@ -777,7 +784,7 @@ ShellRoot {
             property: "opacity"
             from: 0.20
             to: 1.0
-            duration: 220
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
     }
@@ -793,16 +800,15 @@ ShellRoot {
             property: "y"
             from: openAnim.fromY
             to: openAnim.toY
-            duration: 320
-            easing.type: Easing.OutBack
-            easing.overshoot: 1.15
+            duration: Theme.morphMs
+            easing.type: Easing.OutCubic
         }
         NumberAnimation {
             target: chassis
             property: "scale"
             from: 0.965
             to: 1.0
-            duration: 300
+            duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
         NumberAnimation {
@@ -810,15 +816,15 @@ ShellRoot {
             property: "opacity"
             from: 0.0
             to: 1.0
-            duration: 200
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
         NumberAnimation {
             target: scrimRect
             property: "opacity"
             from: 0.0
-            to: 0.60
-            duration: 240
+            to: root.targetScrim
+            duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
     }
@@ -831,21 +837,21 @@ ShellRoot {
             target: chassis
             property: "scale"
             to: 0.965
-            duration: 180
+            duration: Theme.easeMs
             easing.type: Easing.InQuad
         }
         NumberAnimation {
             target: chassis
             property: "opacity"
             to: 0.0
-            duration: 160
+            duration: Theme.easeMs
             easing.type: Easing.InQuad
         }
         NumberAnimation {
             target: scrimRect
             property: "opacity"
             to: 0.0
-            duration: 200
+            duration: Theme.easeMs
             easing.type: Easing.InQuad
         }
 

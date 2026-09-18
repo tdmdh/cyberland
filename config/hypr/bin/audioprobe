@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""
+audioprobe - Fast PipeWire / PulseAudio telemetry and control tool for Quickshell Spectrum.
+Outputs structured JSON and provides atomic sink/stream volume commands.
+"""
+
+import sys
+import json
+import subprocess
+
+def run_cmd(cmd):
+    try:
+        return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=1.5).decode('utf-8', errors='ignore')
+    except Exception:
+        return ""
+
+def get_telemetry():
+    # 1. Query Sinks
+    sinks_raw = run_cmd(['pactl', '-f', 'json', 'list', 'sinks'])
+    try:
+        sinks_data = json.loads(sinks_raw) if sinks_raw.strip() else []
+    except Exception:
+        sinks_data = []
+
+    # 2. Query Sink Inputs (active application streams)
+    inputs_raw = run_cmd(['pactl', '-f', 'json', 'list', 'sink-inputs'])
+    try:
+        inputs_data = json.loads(inputs_raw) if inputs_raw.strip() else []
+    except Exception:
+        inputs_data = []
+
+    # 3. Query Default Sink
+    default_sink = run_cmd(['pactl', 'get-default-sink']).strip()
+
+    # 4. Process Sinks
+    sinks = []
+    for s in sinks_data:
+        vol_pct = 0
+        vol_db = "0.0 dB"
+        vols = s.get('volume', {})
+        for ch in vols.values():
+            if isinstance(ch, dict):
+                if 'value_percent' in ch:
+                    try:
+                        vol_pct = int(ch['value_percent'].replace('%', ''))
+                    except Exception:
+                        pass
+                if 'db' in ch:
+                    vol_db = ch['db']
+                break
+
+        name = s.get('name', '')
+        desc = s.get('description', name)
+        props = s.get('properties', {})
+        form_factor = props.get('device.form_factor') or props.get('device.bus') or 'audio'
+
+        # Clean display name
+        nick = props.get('node.nick') or props.get('device.nick') or desc
+        if 'iec958' in name.lower():
+            label = "DIGITAL OPTICAL (S/PDIF)"
+        elif 'hdmi' in name.lower():
+            label = "HDMI / DISPLAYPORT"
+        elif 'bluez' in name.lower() or 'airpods' in desc.lower():
+            label = "BLUETOOTH HEADSET"
+        elif 'analog' in name.lower():
+            label = "ANALOG STEREO"
+        else:
+            label = desc[:28]
+
+        sinks.append({
+            'index': s.get('index', 0),
+            'name': name,
+            'desc': desc,
+            'label': label,
+            'nick': nick,
+            'mute': s.get('mute', False),
+            'volume': vol_pct,
+            'db': vol_db,
+            'active_port': s.get('active_port', ''),
+            'is_default': (name == default_sink)
+        })
+
+    # 5. Process Active Audio Streams (Inputs)
+    streams = []
+    for inp in inputs_data:
+        props = inp.get('properties', {})
+        app_name = (
+            props.get('application.name')
+            or props.get('media.name')
+            or props.get('pipewire.sec.client.name')
+            or 'Application'
+        )
+        media_name = props.get('media.name') or props.get('media.title') or ''
+        vol_pct = 100
+        vol_db = "0.0 dB"
+        vols = inp.get('volume', {})
+        for ch in vols.values():
+            if isinstance(ch, dict):
+                if 'value_percent' in ch:
+                    try:
+                        vol_pct = int(ch['value_percent'].replace('%', ''))
+                    except Exception:
+                        pass
+                if 'db' in ch:
+                    vol_db = ch['db']
+                break
+
+        streams.append({
+            'index': inp.get('index', 0),
+            'app': app_name,
+            'media': media_name,
+            'mute': inp.get('mute', False),
+            'volume': vol_pct,
+            'db': vol_db
+        })
+
+    return {
+        'default_sink': default_sink,
+        'sinks': sinks,
+        'streams': streams
+    }
+
+def main():
+    if len(sys.argv) > 1:
+        action = sys.argv[1]
+        if action == "set-sink" and len(sys.argv) > 2:
+            subprocess.run(['pactl', 'set-default-sink', sys.argv[2]])
+            return
+        elif action == "set-volume" and len(sys.argv) > 3:
+            sink = sys.argv[2]
+            pct = str(sys.argv[3]).replace('%', '') + '%'
+            subprocess.run(['pactl', 'set-sink-volume', sink, pct])
+            return
+        elif action == "toggle-mute" and len(sys.argv) > 2:
+            sink = sys.argv[2]
+            subprocess.run(['pactl', 'set-sink-mute', sink, 'toggle'])
+            return
+        elif action == "set-stream-volume" and len(sys.argv) > 3:
+            idx = sys.argv[2]
+            pct = str(sys.argv[3]).replace('%', '') + '%'
+            subprocess.run(['pactl', 'set-sink-input-volume', idx, pct])
+            return
+        elif action == "toggle-stream-mute" and len(sys.argv) > 2:
+            idx = sys.argv[2]
+            subprocess.run(['pactl', 'set-sink-input-mute', idx, 'toggle'])
+            return
+
+    # Default: output telemetry JSON
+    print(json.dumps(get_telemetry()))
+
+if __name__ == '__main__':
+    main()

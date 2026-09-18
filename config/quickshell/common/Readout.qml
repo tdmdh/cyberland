@@ -12,7 +12,7 @@ Row {
 
     property string label: ""
     property string value: ""
-    property color  valueColor: Theme.textPrimary
+    property color  valueColor: Theme.text
 
     spacing: 4
     anchors.verticalCenter: parent.verticalCenter
@@ -22,9 +22,9 @@ Row {
         text: readout.label
         color: Theme.dim
         font.family: Theme.fontDisplay
-        font.pixelSize: Theme.szNano
+        font.pixelSize: Theme.szMicro
         font.weight: Font.Medium
-        font.letterSpacing: 0.8
+        font.letterSpacing: Theme.trkTight
     }
 
     Text {
@@ -32,7 +32,7 @@ Row {
         text: readout.value
         color: readout.valueColor
         font.family: Theme.fontMono
-        font.pixelSize: Theme.szTail
+        font.pixelSize: Theme.szMicro
         font.weight: Font.Bold
     }
 }

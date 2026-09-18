@@ -100,7 +100,7 @@ Column {
             color: Theme.dim
             anchors.baseline: valueText.baseline
             font.family: Theme.fontDisplay
-            font.pixelSize: Theme.szTail
+            font.pixelSize: Theme.szMicro
             font.letterSpacing: Theme.trkLabel
         }
     }

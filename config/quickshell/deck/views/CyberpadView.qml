@@ -11,9 +11,9 @@ Item {
     readonly property string panelTitle: "CYBERPAD"
     readonly property string panelJp: "電脳卓"
     readonly property string panelHint: "CTRL+S SAVE  •  CTRL+Y COPY  •  CTRL+ENTER RUN  •  ESC CLOSE"
-    readonly property int panelWidth: 860
+    readonly property int panelWidth: Theme.panelS
     readonly property int panelHeight: 400
-    readonly property string placement: "top"
+    readonly property string placement: "center"
 
     signal closeRequested()
 
@@ -97,13 +97,13 @@ Item {
                 jp: "行数"
                 value: ("00" + view.lineCount).slice(-3)
                 subValue: view.saved ? "SAVED" : "DIRTY"
-                tint: view.saved ? Theme.laser : Theme.amber
+                tint: view.saved ? Theme.accent : Theme.warn
             }
             Btn {
                 text: view.copied ? "COPIED" : "COPY"
                 jp: "複製"
                 active: view.copied
-                tint: Theme.laser
+                tint: Theme.accent
                 implicitHeight: 22
                 onClicked: view.copyAll()
             }
@@ -160,9 +160,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 0
-        color: Theme.glassCard
+        color: Theme.card
         border.width: 1
-        border.color: view.saved ? Theme.glassBorder : Theme.amber
+        border.color: view.saved ? Theme.edge : Theme.warn
         clip: true
 
         ScrollView {
@@ -176,10 +176,10 @@ Item {
                 width: scrollArea.width
                 text: view.buffer
                 placeholderText: "// Enter code, prompts, notes, or shell commands here..."
-                placeholderTextColor: Theme.textDim
-                color: Theme.textPrimary
+                placeholderTextColor: Theme.faint
+                color: Theme.text
                 font.family: Theme.fontMono
-                font.pixelSize: 13
+                font.pixelSize: Theme.szBody
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 background: null

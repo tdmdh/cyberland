@@ -92,15 +92,12 @@ ShellRoot {
         }
     }
 
-    // ---- Workspace Transition Service ------------------------------------
+    // ---- Workspaces ------------------------------------------------------
     readonly property int focusedWsId: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
-    Timer { id: wsTimer; interval: 1300 }
-
-    onFocusedWsIdChanged: {
-        if (root.armed) {
-            wsTimer.restart();
-        }
-    }
+    // Ids of workspaces with windows. Re-evaluates as windows open, close
+    // and move, because the binding reads every workspace's toplevels.
+    readonly property var occupiedWs: Hyprland.workspaces.values
+        .filter(w => w.toplevels.values.length > 0).map(w => w.id)
 
     // ---- Agent Activity Telemetry ----------------------------------------
     property string busyTool: ""
@@ -188,7 +185,7 @@ ShellRoot {
         height: 12
         radius: 0
         anchors.verticalCenter: parent.verticalCenter
-        color: Theme.glassBorder
+        color: Theme.edge
     }
 
     // Dotted 3D Orbital Thinking Orb (Inspired by thinking-orbs, hardware-accelerated on QML Scene Graph)
@@ -209,7 +206,7 @@ ShellRoot {
         property bool active: true
 
         property color orbColor: root.busyErrs > 0 ? Theme.alert
-                               : (root.busyTool.toLowerCase().includes("think") ? Theme.accent : Theme.neonMagenta)
+                               : (root.busyTool.toLowerCase().includes("think") ? Theme.accent : Theme.accent2)
 
         // Orbit 1: Outer tilted particle ring (Clockwise, 3200ms)
         Item {
@@ -316,8 +313,13 @@ ShellRoot {
             Rectangle { x: hair.x + hair.width - 4; y: hair.y + (hair.height / 2); width: 7; height: 1; color: Theme.line }
 
             // =================================================================
-            // ---- THE SMART DYNAMIC CYBER ISLAND -----------------------------
+            // ---- THE ISLAND -------------------------------------------------
             // =================================================================
+            // A tab hanging from the top edge of the screen, chamfered at the
+            // bottom corners and tethered to the frame hairline's centre mark.
+            // The left segment is the workspace, in every mode; the rest is
+            // whichever mode is answering. Only the outline takes colour, and
+            // only for warn and alert.
             readonly property bool isDiskWarn: Sys.disk >= 80
             readonly property bool isDiskCrit: Sys.disk >= 90
             readonly property bool isAlert: isDiskCrit || (Sys.temp >= 85) || (root.busyErrs > 0)
@@ -325,99 +327,110 @@ ShellRoot {
 
             readonly property string activeMode: {
                 if (osdTimer.running) return "osd";
-                if (wsTimer.running) return "workspace";
                 if (trackTimer.running) return "track";
                 if (root.busyTool !== "") return "agent";
                 if (root.isHighCompute) return "compute";
                 return "resting";
             }
 
-            readonly property color islandAccent: isAlert ? Theme.alert
-                                                : (isWarn ? Theme.warn
-                                                : (activeMode === "agent" ? (root.busyErrs > 0 ? Theme.alert : Theme.neonMagenta)
-                                                : (activeMode === "workspace" ? Theme.accent
-                                                : (activeMode === "osd" ? (root.osdKind === "brightness" ? Theme.warn : (root.muted ? Theme.alert : Theme.accent))
-                                                : Theme.laser))))
-
+            // Tether: island bottom to the hairline's centre tick. It shortens
+            // as the island grows and closes completely at OSD height.
             Rectangle {
+                x: hair.x + hair.width / 2
+                y: island.y + island.height
+                width: 1
+                height: Math.max(0, hair.y - 3 - y)
+                color: island.stroke
+            }
+
+            Item {
                 id: island
                 anchors.horizontalCenter: parent.horizontalCenter
+                // y -1 pushes the top stroke off-screen, so the tab reads as part
+                // of the bezel rather than a box floating in the band.
+                y: -1
+                height: win.activeMode === "resting" ? 31 : (win.activeMode === "osd" ? 36 : 34)
+                width: activeContentRow.implicitWidth + 2 * (root.pad + island.cut)
 
-                // Dynamic height & Y position with Apple fluid spring physics
-                height: (win.activeMode === "osd") ? 34
-                      : (win.activeMode !== "resting" ? 32 : 28)
-                y: (win.activeMode === "osd") ? 4
-                 : (win.activeMode !== "resting" ? 5 : root.islandY)
+                readonly property int cut: 9
+                readonly property color stroke: win.isAlert ? Theme.alert
+                                              : (win.isWarn ? Theme.warn : Theme.line)
 
-                // Dynamic width with Apple physical spring overshoot
-                width: Math.max(140, contentSlot.width + 26 + (diskChip.visible ? diskChip.implicitWidth + 8 : 0) + (mouseChip.visible ? mouseChip.implicitWidth + 8 : 0))
-
-                radius: 0
-
-                // Apple fluid physical spring animations
+                // The island is the one object on the desktop allowed to bounce.
                 Behavior on width {
-                    NumberAnimation {
-                        duration: 320
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.15
-                    }
+                    NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
                 }
                 Behavior on height {
-                    NumberAnimation {
-                        duration: 280
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.12
-                    }
-                }
-                Behavior on y {
-                    NumberAnimation {
-                        duration: 280
-                        easing.type: Easing.OutCubic
-                    }
+                    NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutBack; easing.overshoot: 1.12 }
                 }
 
-                color: win.isAlert ? Qt.rgba(Theme.alert.r, Theme.alert.g, Theme.alert.b, 0.26)
-                     : (win.isWarn ? Qt.rgba(Theme.warn.r, Theme.warn.g, Theme.warn.b, 0.20)
-                                   : Theme.glassCard)
-                border.width: 1
-                border.color: win.isAlert ? Theme.alert : (win.isWarn ? Theme.warn : Theme.glassBorder)
-
-                Behavior on color { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
-
-                // Top photonic specular catch
-                Rectangle {
-                    anchors { top: parent.top; left: parent.left; right: parent.right }
-                    anchors.margins: 1
-                    height: 1
-                    radius: 0
-                    color: "#FFFFFF"
-                    opacity: 0.15
+                ChamferBox {
+                    anchors.fill: parent
+                    cut: island.cut
+                    cutTopLeft: false
+                    cutTopRight: false
+                    cutBottomLeft: true
+                    cutBottomRight: true
+                    strokeColor: island.stroke
+                    fillColor: win.isAlert ? Qt.rgba(Theme.alert.r, Theme.alert.g, Theme.alert.b, 0.26)
+                             : (win.isWarn ? Qt.rgba(Theme.warn.r, Theme.warn.g, Theme.warn.b, 0.20)
+                                           : Theme.cardDark)
+                    Behavior on strokeColor { ColorAnimation { duration: Theme.easeMs } }
+                    Behavior on fillColor { ColorAnimation { duration: Theme.easeMs } }
                 }
 
-                // Dual laser edge catches
-                Rectangle {
-                    anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
-                    width: 2
-                    radius: 0
-                    color: win.islandAccent
-                    opacity: 0.85
-                }
-                Rectangle {
-                    anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
-                    width: 2
-                    radius: 0
-                    color: win.islandAccent
-                    opacity: 0.85
-                }
-
-                // Master Island Content Row
                 Row {
                     id: activeContentRow
                     anchors.centerIn: parent
-                    spacing: (diskChip.visible || mouseChip.visible) ? 8 : 0
+                    // Centre on the visible part: the tab's top row is off-screen.
+                    anchors.verticalCenterOffset: 1
+                    spacing: 10
 
-                    // Centered Fluid Content Slot (Crossfades without double-width glitches)
+                    // ---------------------------------------------------------
+                    // 0. WORKSPACE SEGMENT (every mode, all day)
+                    // ---------------------------------------------------------
+                    // On screen permanently, so nothing in it may loop -- see
+                    // frame/selftest.sh. The ticks ease on a switch and stop.
+                    // This replaced a 1.3s "WORKSPACE [03]" banner: the number
+                    // changing in place is the feedback now.
+                    Row {
+                        id: wsSeg
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: ("0" + root.focusedWsId).slice(-2)
+                            color: Theme.accent
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.szValue
+                            font.weight: Font.DemiBold
+                        }
+
+                        // Workspaces 1-10 as a tape: here is tall and accent, held
+                        // (has windows) is mid and dim, empty is a dot.
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 3
+                            Repeater {
+                                model: 10
+                                Rectangle {
+                                    required property int index
+                                    readonly property bool here: index + 1 === root.focusedWsId
+                                    readonly property bool held: root.occupiedWs.indexOf(index + 1) >= 0
+                                    anchors.bottom: parent.bottom
+                                    width: 3
+                                    height: here ? 12 : (held ? 8 : 3)
+                                    color: here ? Theme.accent : (held ? Theme.dim : Theme.line)
+                                    Behavior on height { NumberAnimation { duration: Theme.easeFastMs; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: Theme.easeFastMs } }
+                                }
+                            }
+                        }
+                    }
+
+                    Divider {}
+
                     Item {
                         id: contentSlot
                         anchors.verticalCenter: parent.verticalCenter
@@ -425,16 +438,11 @@ ShellRoot {
                         height: 20
 
                         Behavior on width {
-                            NumberAnimation {
-                                duration: 300
-                                easing.type: Easing.OutBack
-                                easing.overshoot: 1.12
-                            }
+                            NumberAnimation { duration: Theme.morphMs; easing.type: Easing.OutBack; easing.overshoot: 1.12 }
                         }
 
                         readonly property Item currentContentItem: {
                             if (win.activeMode === "osd") return osdContent;
-                            if (win.activeMode === "workspace") return wsContent;
                             if (win.activeMode === "track") return trackContent;
                             if (win.activeMode === "agent") return agentContent;
                             if (win.activeMode === "compute") return computeContent;
@@ -452,25 +460,25 @@ ShellRoot {
                             scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
                             visible: opacity > 0.01
 
-                            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                            Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
 
                             Text {
                                 text: root.osdLabel
                                 font.family: Theme.fontDisplay
-                                font.pixelSize: Theme.szNano
+                                font.pixelSize: Theme.szMicro
                                 font.weight: Font.Bold
-                                color: root.osdKind === "brightness" ? Theme.warn : (root.muted ? Theme.alert : Theme.accent)
-                                font.letterSpacing: 1.0
+                                color: (root.osdKind !== "brightness" && root.muted) ? Theme.alert : Theme.accent
+                                font.letterSpacing: Theme.trkLabel
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
                             Text {
                                 text: root.osdReadout
                                 font.family: Theme.fontMono
-                                font.pixelSize: Theme.szTail
+                                font.pixelSize: Theme.szMicro
                                 font.weight: Font.DemiBold
-                                color: Theme.textPrimary
+                                color: Theme.text
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
@@ -483,7 +491,7 @@ ShellRoot {
                                     anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
                                     width: Math.max(0, Math.min(parent.width, parent.width * root.osdMeter))
                                     radius: 0
-                                    color: root.osdKind === "brightness" ? Theme.warn : (root.muted ? Theme.dim : Theme.laser)
+                                    color: (root.osdKind !== "brightness" && root.muted) ? Theme.dim : Theme.accent
 
                                     Rectangle {
                                         anchors { top: parent.top; left: parent.left; right: parent.right }
@@ -494,390 +502,331 @@ ShellRoot {
                         }
 
                         // ---------------------------------------------------------
-                        // 2. WORKSPACE MORPH (Transient switch banner)
+                        // 3. NOW PLAYING TRACK MORPH (Song change banner)
                         // ---------------------------------------------------------
                         Row {
-                            id: wsContent
+                            id: trackContent
+                            anchors.centerIn: parent
+                            spacing: 7
+                            opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
+                            scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
+                            visible: opacity > 0.01
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+
+                            Text {
+                                text: "♪"
+                                color: Theme.accent
+                                font.pixelSize: Theme.szMicro
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: root.trackTitle.length > 28 ? root.trackTitle.slice(0, 26) + "…" : root.trackTitle
+                                font.family: Theme.fontMono
+                                font.pixelSize: Theme.szMicro
+                                font.weight: Font.DemiBold
+                                color: Theme.text
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        // ---------------------------------------------------------
+                        // 4. AGENT MODE (Dotted Orbital Thinking Orb & Tool Execution)
+                        // ---------------------------------------------------------
+                        Row {
+                            id: agentContent
+                            anchors.centerIn: parent
+                            spacing: 7
+                            opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
+                            scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
+                            visible: opacity > 0.01
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+
+                            ThinkingOrb { active: agentContent.visible }
+
+                            Row {
+                                spacing: 5
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    text: "AGENT"
+                                    font.family: Theme.fontDisplay
+                                    font.pixelSize: Theme.szMicro
+                                    font.weight: Font.Bold
+                                    color: Theme.dim
+                                    font.letterSpacing: Theme.trkLabel
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Text {
+                                    text: "代理"
+                                    font.family: Theme.fontJP
+                                    font.pixelSize: Theme.szMicro
+                                    color: Theme.accent
+                                    opacity: Theme.opacityJP
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Text {
+                                    text: root.busyTool.toUpperCase()
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: Theme.szMicro
+                                    font.weight: Font.DemiBold
+                                    color: root.busyErrs > 0 ? Theme.alert : Theme.accent
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        // ---------------------------------------------------------
+                        // 5. COMPUTE MODE (High CPU/GPU/Thermal Avionics)
+                        // ---------------------------------------------------------
+                        Row {
+                            id: computeContent
                             anchors.centerIn: parent
                             spacing: 8
                             opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
                             scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
                             visible: opacity > 0.01
 
-                            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                            Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
 
-                            Text {
-                                text: "WORKSPACE"
-                                font.family: Theme.fontDisplay
-                                font.pixelSize: Theme.szNano
-                                font.weight: Font.Medium
-                                color: Theme.dim
-                                font.letterSpacing: 1.2
-                                anchors.verticalCenter: parent.verticalCenter
+                            Pip {
+                                size: 5
+                                minOpacity: 0.3
+                                running: computeContent.visible
+                                color: (Sys.cpu >= 90 || Sys.temp >= 85) ? Theme.alert : Theme.warn
                             }
 
-                            Text {
-                                text: "領域"
-                                font.family: Theme.fontJP
-                                font.pixelSize: Theme.szNano
-                                color: Theme.laser
-                                opacity: Theme.opacityJP
-                                anchors.verticalCenter: parent.verticalCenter
+                            Readout {
+                                label: "CPU"
+                                value: Sys.cpu < 0 ? "--" : Sys.cpu + "%"
+                                valueColor: Sys.cpu >= 90 ? Theme.alert : (Sys.cpu >= 75 ? Theme.warn : Theme.text)
                             }
-
-                            Rectangle {
-                                width: 28; height: 16; radius: 0
-                                color: Theme.glassActive
-                                border.width: 1
-                                border.color: Theme.accent
-                                anchors.verticalCenter: parent.verticalCenter
-
-                            Rectangle {
-                                anchors { top: parent.top; left: parent.left; right: parent.right }
-                                anchors.margins: 1; height: 1; color: "#FFFFFF"; opacity: 0.4
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: ("0" + root.focusedWsId).slice(-2)
-                                font.family: Theme.fontMono
-                                font.pixelSize: 10
-                                font.weight: Font.Bold
-                                color: Theme.accent
-                            }
-                        }
-                    }
-
-                    // ---------------------------------------------------------
-                    // 3. NOW PLAYING TRACK MORPH (Song change banner)
-                    // ---------------------------------------------------------
-                    Row {
-                        id: trackContent
-                        anchors.centerIn: parent
-                        spacing: 7
-                        opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
-                        scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-
-                        Text {
-                            text: "♪"
-                            color: Theme.accent
-                            font.pixelSize: Theme.szTail
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: root.trackTitle.length > 28 ? root.trackTitle.slice(0, 26) + "…" : root.trackTitle
-                            font.family: Theme.fontMono
-                            font.pixelSize: Theme.szTail
-                            font.weight: Font.DemiBold
-                            color: Theme.textPrimary
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    // ---------------------------------------------------------
-                    // 4. AGENT MODE (Dotted Orbital Thinking Orb & Tool Execution)
-                    // ---------------------------------------------------------
-                    Row {
-                        id: agentContent
-                        anchors.centerIn: parent
-                        spacing: 7
-                        opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
-                        scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-
-                        ThinkingOrb { active: agentContent.visible }
-
-                        Row {
-                            spacing: 5
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                text: "AGENT"
-                                font.family: Theme.fontDisplay
-                                font.pixelSize: Theme.szNano
-                                font.weight: Font.Bold
-                                color: Theme.dim
-                                font.letterSpacing: 1.0
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: "代理"
-                                font.family: Theme.fontJP
-                                font.pixelSize: Theme.szNano
-                                color: Theme.laser
-                                opacity: Theme.opacityJP
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: root.busyTool.toUpperCase()
-                                font.family: Theme.fontMono
-                                font.pixelSize: Theme.szTail
-                                font.weight: Font.DemiBold
-                                color: root.busyErrs > 0 ? Theme.alert : Theme.accent
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                    }
-
-                    // ---------------------------------------------------------
-                    // 5. COMPUTE MODE (High CPU/GPU/Thermal Avionics)
-                    // ---------------------------------------------------------
-                    Row {
-                        id: computeContent
-                        anchors.centerIn: parent
-                        spacing: 8
-                        opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
-                        scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-
-                        Pip {
-                            size: 5
-                            minOpacity: 0.3
-                            running: computeContent.visible
-                            color: (Sys.cpu >= 90 || Sys.temp >= 85) ? Theme.alert : Theme.warn
-                        }
-
-                        Readout {
-                            label: "CPU"
-                            value: Sys.cpu < 0 ? "--" : Sys.cpu + "%"
-                            valueColor: Sys.cpu >= 90 ? Theme.alert : (Sys.cpu >= 75 ? Theme.warn : Theme.textPrimary)
-                        }
-
-                        Divider {}
-
-                        Readout {
-                            label: "GPU"
-                            value: Sys.gpu < 0 ? "--" : Sys.gpu + "%"
-                            valueColor: Theme.level(Sys.gpu)
-                        }
-
-                        Divider {}
-
-                        Readout {
-                            label: "TEMP"
-                            value: Sys.temp < 0 ? "--" : Sys.temp + "°C"
-                            valueColor: Sys.temp >= 85 ? Theme.alert : (Sys.temp >= 75 ? Theme.warn : Theme.laser)
-                        }
-                    }
-
-                    // ---------------------------------------------------------
-                    // 6. RESTING STATE (Node ID • Clock + Ambient Media Wave Beads)
-                    // ---------------------------------------------------------
-                    Row {
-                        id: restingContent
-                        anchors.centerIn: parent
-                        spacing: 7
-                        opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
-                        scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-
-                        // Static node bead. This used to breathe on a 1500ms
-                        // loop. A looping fade never lets the compositor idle,
-                        // so on a 144Hz screen it held the whole desktop at full
-                        // composite rate all day: measured 8% GPU with resting
-                        // static against 33% with this one square breathing.
-                        // Resting is the all-day state, so it is the one mode
-                        // that must not animate. The transient modes still do.
-                        Rectangle {
-                            width: 4; height: 4; radius: 0
-                            color: Theme.accent
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Host / Node ID
-                        Text {
-                            text: (Sys.host || "JOYBOY").toUpperCase()
-                            font.family: Theme.fontMono
-                            font.pixelSize: Theme.szTail
-                            font.weight: Font.Bold
-                            color: Theme.accent
-                            font.letterSpacing: 0.5
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "•"
-                            color: Theme.dim
-                            font.pixelSize: Theme.szNano
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Clock
-                        Text {
-                            text: Qt.formatDateTime(clock.date, "HH:mm")
-                            font.family: Theme.fontMono
-                            font.pixelSize: Theme.szTail
-                            font.weight: Font.Medium
-                            color: Theme.textPrimary
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Ambient Media Wave Beads (active when playing music)
-                        Row {
-                            visible: root.isPlaying
-                            spacing: 5
-                            anchors.verticalCenter: parent.verticalCenter
 
                             Divider {}
 
-                            // A frozen waveform, not a dancing one. These bars
-                            // answer "is something playing", and a static
-                            // silhouette answers it just as well -- for the same
-                            // reason the bead above stopped breathing, and it
-                            // mattered more here, because music plays for hours.
-                            Row {
-                                spacing: 2
+                            Readout {
+                                label: "GPU"
+                                value: Sys.gpu < 0 ? "--" : Sys.gpu + "%"
+                                valueColor: Theme.level(Sys.gpu)
+                            }
+
+                            Divider {}
+
+                            Readout {
+                                label: "TEMP"
+                                value: Sys.temp < 0 ? "--" : Sys.temp + "°C"
+                                valueColor: Sys.temp >= 85 ? Theme.alert : (Sys.temp >= 75 ? Theme.warn : Theme.accent)
+                            }
+                        }
+
+                        // ---------------------------------------------------------
+                        // 6. RESTING STATE (Clock + Ambient Media Wave Beads)
+                        // ---------------------------------------------------------
+                        Row {
+                            id: restingContent
+                            anchors.centerIn: parent
+                            spacing: 7
+                            opacity: (contentSlot.currentContentItem === this) ? 1.0 : 0.0
+                            scale: (contentSlot.currentContentItem === this) ? 1.0 : 0.86
+                            visible: opacity > 0.01
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Theme.easeMs; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+
+                            // Nothing here loops. A looping fade never lets the compositor idle,
+                            // so on a 144Hz screen it held the whole desktop at full composite
+                            // rate all day: measured 8% GPU with resting static against 33% with
+                            // one 4px square breathing. Resting is the all-day state, so it is the
+                            // one mode that must not animate. The transient modes still do.
+                            // The hostname that sat here moved to the hover detail: it never
+                            // changes, and the workspace segment needed the room more.
+
+                            // Clock
+                            Text {
+                                text: Qt.formatDateTime(clock.date, "HH:mm")
+                                font.family: Theme.fontMono
+                                font.pixelSize: Theme.szBody
+                                font.weight: Font.Medium
+                                color: Theme.text
                                 anchors.verticalCenter: parent.verticalCenter
-                                Repeater {
-                                    model: [9, 14, 6, 11]
-                                    Rectangle {
-                                        required property var modelData
-                                        width: 2
-                                        height: modelData
-                                        radius: 0
-                                        color: Theme.laser
-                                        anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // Ambient Media Wave Beads (active when playing music)
+                            Row {
+                                visible: root.isPlaying
+                                spacing: 5
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Divider {}
+
+                                // A frozen waveform, not a dancing one. These bars
+                                // answer "is something playing", and a static
+                                // silhouette answers it just as well -- for the same
+                                // reason the bead above stopped breathing, and it
+                                // mattered more here, because music plays for hours.
+                                Row {
+                                    spacing: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Repeater {
+                                        model: [9, 14, 6, 11]
+                                        Rectangle {
+                                            required property var modelData
+                                            width: 2
+                                            height: modelData
+                                            radius: 0
+                                            color: Theme.accent
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
                                     }
                                 }
                             }
+
+                            // Hover detail. sysbus already collects all of this and
+                            // the island never showed any of it. Resting only: every
+                            // other mode is already answering a question, and this is
+                            // the one state with nothing to say.
+                            //
+                            // No width animation of its own -- appearing inside the
+                            // Row grows restingContent.implicitWidth, which the
+                            // island's existing spring already follows.
+                            Row {
+                                visible: hoverZone.containsMouse
+                                spacing: 7
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Divider {}
+
+                                Readout {
+                                    label: "HOST"
+                                    value: (Sys.host || "--").toUpperCase()
+                                }
+
+                                Divider {}
+
+                                Readout {
+                                    label: "MEM"
+                                    value: Sys.mem < 0 ? "--" : Sys.mem + "%"
+                                    valueColor: Theme.level(Sys.mem)
+                                }
+
+                                Divider {}
+
+                                Readout {
+                                    label: "NET"
+                                    value: Sys.rate(Sys.rx) + "\u2193 " + Sys.rate(Sys.tx) + "\u2191"
+                                    valueColor: Theme.accent
+                                }
+
+                                Divider {}
+
+                                Readout {
+                                    label: "UP"
+                                    value: Sys.up || "--"
+                                }
+                            }
+                        }
+                    }
+
+                    // ---------------------------------------------------------
+                    // 7. THRESHOLD SENTINELS (Disk Warning & Mouse Battery)
+                    // ---------------------------------------------------------
+                    // Disk Warning Chip: Surfaces automatically when storage >= 80%
+                    Row {
+                        id: diskChip
+                        visible: win.isDiskWarn
+                        spacing: 5
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Divider {}
+
+                        Pip {
+                            minOpacity: 0.2
+                            running: diskChip.visible
+                            color: win.isDiskCrit ? Theme.alert : Theme.warn
                         }
 
-                        // Hover detail. sysbus already collects all of this and
-                        // the island never showed any of it. Resting only: every
-                        // other mode is already answering a question, and this is
-                        // the one state with nothing to say.
-                        //
-                        // No width animation of its own -- appearing inside the
-                        // Row grows restingContent.implicitWidth, which the
-                        // island's existing spring already follows.
-                        Row {
-                            visible: hoverZone.containsMouse
-                            spacing: 7
+                        Text {
+                            text: "DISK " + (Sys.disk < 0 ? "--" : Sys.disk + "%")
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.szMicro
+                            font.weight: Font.Bold
+                            color: win.isDiskCrit ? Theme.alert : Theme.warn
                             anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
 
-                            Divider {}
+                    // Peripheral Mouse Battery Alert
+                    Row {
+                        id: mouseChip
+                        visible: root.mouseLow
+                        spacing: 5
+                        anchors.verticalCenter: parent.verticalCenter
 
-                            Readout {
-                                label: "MEM"
-                                value: Sys.mem < 0 ? "--" : Sys.mem + "%"
-                                valueColor: Theme.level(Sys.mem)
-                            }
+                        Divider {}
 
-                            Divider {}
+                        Pip {
+                            minOpacity: 0.2
+                            running: mouseChip.visible
+                            color: root.mouseBat === "Critical" ? Theme.alert : Theme.warn
+                        }
 
-                            Readout {
-                                label: "NET"
-                                value: Sys.rate(Sys.rx) + "\u2193 " + Sys.rate(Sys.tx) + "\u2191"
-                                valueColor: Theme.laser
-                            }
-
-                            Divider {}
-
-                            Readout {
-                                label: "UP"
-                                value: Sys.up || "--"
-                            }
+                        Text {
+                            text: "MOUSE " + root.mouseBat.toUpperCase()
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.szMicro
+                            font.weight: Font.Bold
+                            color: root.mouseBat === "Critical" ? Theme.alert : Theme.warn
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                 }
 
                 // ---------------------------------------------------------
-                // 7. THRESHOLD SENTINELS (Disk Warning & Mouse Battery)
+                // 8. HOVER / CLICK TARGET
                 // ---------------------------------------------------------
-                // Disk Warning Chip: Surfaces automatically when storage >= 80%
-                Row {
-                    id: diskChip
-                    visible: win.isDiskWarn
-                    spacing: 5
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Divider {}
-
-                    Pip {
-                        minOpacity: 0.2
-                        running: diskChip.visible
-                        color: win.isDiskCrit ? Theme.alert : Theme.warn
+                // Sibling of the content row, not a child: a Row positions what it
+                // holds, and anchors.fill inside one fights the positioner.
+                //
+                // Overhangs the island by 6px so the edge does not chatter --
+                // hovering grows the island, and a zone ending exactly at the
+                // resting edge would hand the pointer back and forth across it.
+                //
+                // ponytail: the hover path is unverified. `hyprctl dispatch
+                // movecursor` warps the pointer without producing a pointer-enter
+                // on a layer surface, and no input-synthesis tool is installed, so
+                // containsMouse could not be driven from a script. The layout it
+                // reveals was verified by forcing the detail row visible. If hover
+                // turns out dead, the mask is the first thing to suspect.
+                MouseArea {
+                    id: hoverZone
+                    anchors.fill: island
+                    anchors.margins: -6
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            Quickshell.execDetached([Quickshell.env("HOME") + "/.config/hypr/bin/qs-panel", "control"]);
+                        } else {
+                            Quickshell.execDetached([Quickshell.env("HOME") + "/.config/hypr/bin/qs-panel", "spectrum"]);
+                        }
                     }
-
-                    Text {
-                        text: "DISK " + (Sys.disk < 0 ? "--" : Sys.disk + "%")
-                        font.family: Theme.fontMono
-                        font.pixelSize: Theme.szNano
-                        font.weight: Font.Bold
-                        color: win.isDiskCrit ? Theme.alert : Theme.warn
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                // Peripheral Mouse Battery Alert
-                Row {
-                    id: mouseChip
-                    visible: root.mouseLow
-                    spacing: 5
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Divider {}
-
-                    Pip {
-                        minOpacity: 0.2
-                        running: mouseChip.visible
-                        color: root.mouseBat === "Critical" ? Theme.alert : Theme.warn
-                    }
-
-                    Text {
-                        text: "MOUSE " + root.mouseBat.toUpperCase()
-                        font.family: Theme.fontMono
-                        font.pixelSize: Theme.szNano
-                        font.weight: Font.Bold
-                        color: root.mouseBat === "Critical" ? Theme.alert : Theme.warn
-                        anchors.verticalCenter: parent.verticalCenter
+                    onWheel: wheel => {
+                        if (wheel.angleDelta.y > 0) {
+                            Quickshell.execDetached(["wpctl", "set-volume", "-l", "1.5", "@DEFAULT_AUDIO_SINK@", "3%+"]);
+                        } else if (wheel.angleDelta.y < 0) {
+                            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "3%-"]);
+                        }
                     }
                 }
             }
-
-            // ---------------------------------------------------------
-            // 8. HOVER / CLICK TARGET
-            // ---------------------------------------------------------
-            // Sibling of the content row, not a child: a Row positions what it
-            // holds, and anchors.fill inside one fights the positioner.
-            //
-            // Overhangs the island by 6px so the edge does not chatter --
-            // hovering grows the island, and a zone ending exactly at the
-            // resting edge would hand the pointer back and forth across it.
-            //
-            // ponytail: the hover path is unverified. `hyprctl dispatch
-            // movecursor` warps the pointer without producing a pointer-enter
-            // on a layer surface, and no input-synthesis tool is installed, so
-            // containsMouse could not be driven from a script. The layout it
-            // reveals was verified by forcing the detail row visible. If hover
-            // turns out dead, the mask is the first thing to suspect.
-            MouseArea {
-                id: hoverZone
-                anchors.fill: island
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Quickshell.execDetached(
-                    [Quickshell.env("HOME") + "/.config/hypr/bin/qs-panel", "control"])
-            }
-        }
     }
 }
 }
