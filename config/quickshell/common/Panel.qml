@@ -1,5 +1,6 @@
-// Apple x Cyberpunk Floating Neural-Glass Panel:
-// Translucent smoked obsidian, specular laser light catches, and Apple fluid spring motion.
+// A standalone modal panel: scrim, placement and entrance animation around a
+// Chrome. The deck morphs one Chrome between its views; this is for a module
+// that owns a single panel of its own (the auth card).
 import QtQuick
 import "."
 
@@ -40,14 +41,13 @@ Item {
         }
     }
 
-    default property alias content: body.data
-    property alias  headerItems: headerSlot.data
+    default property alias content: box.content
+    property alias  headerItems: box.headerItems
 
     signal dismissed()
 
     anchors.fill: parent
 
-    // Full-screen backdrop focus scrim (Pure smoked obsidian glass)
     Rectangle {
         id: scrimRect
         anchors.fill: parent
@@ -62,7 +62,7 @@ Item {
         onClicked: panel.dismissed()
     }
 
-    Item {
+    Chrome {
         id: box
         anchors.horizontalCenter: (panel.placement === "center" || panel.placement === "top" || panel.placement === "bottom") ? parent.horizontalCenter : undefined
         anchors.verticalCenter: (panel.placement === "center" || (panel.placement === "right" && panel.panelHeight > 0)) ? parent.verticalCenter : undefined
@@ -77,189 +77,25 @@ Item {
         anchors.bottomMargin: (panel.placement === "bottom" || (panel.placement === "right" && panel.panelHeight <= 0)) ? 48 : 0
 
         width: panel.fullBleed ? panel.width - 96 : panel.panelWidth
-        readonly property int chrome: panel.pad * 2 + header.height
-                                      + 2 * (panel.gap * 2 + 1) + footer.height
         height: (panel.placement === "right" && panel.panelHeight <= 0)
                 ? (parent.height - 96)
                 : (panel.panelHeight > 0
                    ? panel.panelHeight
                    : (panel.fullBleed
                       ? panel.height - 96
-                      : Math.min(box.chrome + body.implicitHeight, panel.height - 120)))
+                      : Math.min(box.chrome + box.bodyImplicitHeight, panel.height - 120)))
 
-        transform: Translate {
-            id: trans
-            x: 0
-            y: 0
-        }
-        scale: 1.0
+        transform: Translate { id: trans }
         opacity: 0
 
-        // Smoked Sapphire Glass Chassis
-        Rectangle {
-            anchors.fill: parent
-            radius: 0
-            color: panel.effectiveScrim !== "none" ? Theme.card : Theme.cardDark
-            border.width: 1
-            border.color: Theme.edge
-
-            // Top laser specular reflection catch
-            Rectangle {
-                anchors { top: parent.top; left: parent.left; right: parent.right }
-                anchors.margins: 1
-                height: 1
-                radius: 0
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 0.15; color: Theme.accentWash }
-                    GradientStop { position: 0.50; color: Theme.accent }
-                    GradientStop { position: 0.85; color: Theme.accentWash }
-                    GradientStop { position: 1.0; color: "transparent" }
-                }
-            }
-
-            // Subtle bottom shadow rim
-            Rectangle {
-                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                height: 1
-                color: Theme.shadow
-            }
-        }
-
-        // Precision Corner Vernier Brackets (1px hairline)
-        Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left;   anchors.top: parent.top }
-        Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.top: parent.top }
-        Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left;   anchors.bottom: parent.bottom }
-        Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.bottom: parent.bottom }
-
-        // Swallows clicks inside panel
-        MouseArea { anchors.fill: parent }
-
-        // ---- Header ------------------------------------------------------
-        Item {
-            id: header
-            anchors { top: parent.top; left: parent.left; right: parent.right
-                      margins: panel.pad }
-            height: 28
-
-            Row {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
-
-                // Glowing Micro-Indicator Pip
-                Rectangle {
-                    width: 6; height: 6; radius: 0
-                    color: Theme.accent
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // Cryptographic Glitch Title
-                GlitchText {
-                    id: glitchTitle
-                    text: panel.title
-                    jp: panel.jp
-                    color: Theme.text
-                    jpColor: Theme.accent
-                    pixelSize: Theme.szValue
-                    letterSpacing: Theme.trkWide
-                    weight: Font.DemiBold
-                }
-            }
-
-            Row {
-                id: headerSlot
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                spacing: 20
-            }
-        }
-
-        // Top Division Rule with Laser Pip
-        Item {
-            id: ruleTopContainer
-            anchors { top: header.bottom; topMargin: panel.gap
-                      left: parent.left; right: parent.right
-                      leftMargin: panel.pad; rightMargin: panel.pad }
-            height: 1
-
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.edge
-            }
-            Rectangle {
-                width: 38
-                height: 1
-                color: Theme.accent
-                anchors.centerIn: parent
-                opacity: 0.85
-            }
-        }
-
-        // ---- Footer ------------------------------------------------------
-        Item {
-            id: footer
-            anchors { bottom: parent.bottom; left: parent.left; right: parent.right
-                      margins: panel.pad }
-            height: 16
-
-            Row {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
-
-                Rectangle {
-                    width: 5; height: 5; radius: 0
-                    color: Theme.accent
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "READY // 待機  •  " + panel.hint
-                    color: Theme.dim
-                    font.family: Theme.fontDisplay
-                    font.pixelSize: Theme.szMicro
-                    font.letterSpacing: Theme.trkLabel
-                }
-            }
-        }
-
-        // Bottom Division Rule
-        Item {
-            id: ruleBottomContainer
-            anchors { bottom: footer.top; bottomMargin: panel.gap
-                      left: parent.left; right: parent.right
-                      leftMargin: panel.pad; rightMargin: panel.pad }
-            height: 1
-
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.edge
-            }
-            Rectangle {
-                width: 30
-                height: 1
-                color: Theme.accentEdge
-                anchors.centerIn: parent
-                opacity: 0.5
-            }
-        }
-
-        // ---- Body --------------------------------------------------------
-        Item {
-            id: body
-            anchors { top: ruleTopContainer.bottom; bottom: ruleBottomContainer.top
-                      left: parent.left; right: parent.right
-                      topMargin: panel.gap; bottomMargin: panel.gap
-                      leftMargin: panel.pad; rightMargin: panel.pad }
-            implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
-            clip: true
-        }
+        title: panel.title
+        jp: panel.jp
+        hint: panel.hint
+        pad: panel.pad
+        gap: panel.gap
+        dark: panel.effectiveScrim === "none"
     }
 
-    // Directional Entrance & Scrim Reveal Animation with Apple Fluid Springs
     ParallelAnimation {
         id: enterAnim
 
@@ -271,7 +107,6 @@ Item {
             duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
-
         NumberAnimation {
             id: slideYAnim
             target: trans
@@ -280,9 +115,7 @@ Item {
             duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
-
         NumberAnimation {
-            id: scaleAnim
             target: box
             property: "scale"
             from: 0.965
@@ -290,9 +123,7 @@ Item {
             duration: Theme.morphMs
             easing.type: Easing.OutCubic
         }
-
         NumberAnimation {
-            id: boxOpacityAnim
             target: box
             property: "opacity"
             from: 0.0
@@ -300,7 +131,6 @@ Item {
             duration: Theme.easeMs
             easing.type: Easing.OutQuad
         }
-
         NumberAnimation {
             id: scrimOpacityAnim
             target: scrimRect
@@ -316,18 +146,11 @@ Item {
         enterAnim.stop();
 
         let sx = 0;
-        let sy = 0;
-        if (panel.placement === "right") {
-            sx = 120;
-        } else if (panel.placement === "left") {
-            sx = -120;
-        } else if (panel.placement === "top") {
-            sy = -70;
-        } else if (panel.placement === "bottom") {
-            sy = 70;
-        } else { // "center"
-            sy = 24;
-        }
+        let sy = 24;    // "center"
+        if (panel.placement === "right") { sx = 120; sy = 0; }
+        else if (panel.placement === "left") { sx = -120; sy = 0; }
+        else if (panel.placement === "top") sy = -70;
+        else if (panel.placement === "bottom") sy = 70;
 
         trans.x = sx;
         trans.y = sy;
@@ -340,10 +163,7 @@ Item {
         scrimOpacityAnim.to = panel.targetScrimOpacity;
 
         enterAnim.start();
-
-        if (typeof glitchTitle !== "undefined" && glitchTitle) {
-            glitchTitle.trigger();
-        }
+        box.glitch();
     }
 
     function resetEntrance() {

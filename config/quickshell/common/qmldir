@@ -9,8 +9,8 @@ Bracket 1.0 Bracket.qml
 Corners 1.0 Corners.qml
 Tag 1.0 Tag.qml
 Panel 1.0 Panel.qml
+Chrome 1.0 Chrome.qml
 Btn 1.0 Btn.qml
-Wheel 1.0 Wheel.qml
 Standby 1.0 Standby.qml
 Scanlines 1.0 Scanlines.qml
 ChamferBox 1.0 ChamferBox.qml

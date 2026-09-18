@@ -43,18 +43,34 @@ echo "$WS" | grep -q 'Animation.Infinite' \
   && fail "workspace segment animates -- it is on screen all day"
 
 # 2. The module actually loads -- catches a broken Pip wiring or QML syntax.
+# If frame is already up, reload it in place and read that reload's log:
+# launching a second instance stacked two islands on the desktop.
+# A reload that fails leaves Quickshell running the old island but no longer
+# watching the file, so after fixing one, restart frame (kill it, qs -d -c frame).
+running() {
+    # pgrep -f would also match this script's own command line.
+    for p in $(pgrep -x qs); do
+        tr '\0' ' ' < "/proc/$p/cmdline" | grep -q -- '-c frame' && return 0
+    done
+    return 1
+}
+loads() { qs log -c frame -t 5000 2>&1 | grep -c 'Configuration Loaded'; }
 LOG=$(mktemp)
-qs -d -c frame >"$LOG" 2>&1
-sleep 3
+if running; then
+    before=$(loads)
+    touch "$QS/frame/shell.qml"
+    i=0
+    until [ "$(loads)" -gt "$before" ] || [ $i -gt 20 ]; do i=$((i+1)); sleep 0.25; done
+    qs log -c frame -t 400 2>&1 \
+        | awk '/Reloading configuration/{buf=""} {buf=buf"\n"$0} END{print buf}' > "$LOG"
+else
+    qs -d -c frame >"$LOG" 2>&1
+    sleep 3
+fi
 grep -q 'Configuration Loaded' "$LOG" || { cat "$LOG" >&2; fail "frame did not load"; }
 grep -qiE 'error|warning|is not a type|Cannot assign' "$LOG" && { cat "$LOG" >&2; fail "QML diagnostics on load"; }
 
-# pgrep -f would also match this script's own command line.
-RUNNING=0
-for p in $(pgrep -x qs); do
-    tr '\0' ' ' < "/proc/$p/cmdline" | grep -q -- '-c frame' && RUNNING=1
-done
-[ "$RUNNING" = "1" ] || fail "frame daemon not running after launch"
+running || fail "frame daemon not running after launch"
 
 rm -f "$LOG"
 echo "frame selftest: ok"

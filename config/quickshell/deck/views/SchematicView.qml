@@ -578,7 +578,7 @@ Item {
             fillColor: view.themeMode === "cyberpunk" ? Theme.layer2 : "#ffffff"
             reticles: true
             notch: true
-            notchColor: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
+            notchColor: view.renderError ? Theme.alert : (view.isRendering ? Theme.dim : Theme.accent)
 
             Flickable {
                 id: canvasFlick
@@ -679,12 +679,12 @@ Item {
                     Rectangle {
                         width: 6; height: 6; radius: 0
                         anchors.verticalCenter: parent.verticalCenter
-                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
+                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.dim : Theme.accent)
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: view.renderError ? "SYNTAX FAULT" : (view.isRendering ? "COMPILING..." : "RENDER ONLINE")
-                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.warn : Theme.accent)
+                        color: view.renderError ? Theme.alert : (view.isRendering ? Theme.dim : Theme.accent)
                         font.family: Theme.fontDisplay
                         font.pixelSize: Theme.szMicro
                         font.letterSpacing: Theme.trkLabel

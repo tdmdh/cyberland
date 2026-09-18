@@ -106,6 +106,14 @@ Item {
     Bracket { corner: "br"; anchors.right: parent.right; anchors.bottom: parent.bottom
               anchors.margins: 40; arm: 34 }
 
+    // Click anywhere to put focus back in the password field. It sat inside
+    // the Column below with anchors.fill, which a Column cannot lay out: Qt
+    // warned "Column will not function" on every lock and idle load.
+    MouseArea {
+        anchors.fill: parent
+        onClicked: if (ro.auth) field.forceActiveFocus()
+    }
+
     Column {
         anchors.centerIn: parent
         spacing: 0
@@ -241,12 +249,6 @@ Item {
                 Component.onCompleted: if (ro.auth) forceActiveFocus()
                 onVisibleChanged: if (visible && ro.auth) forceActiveFocus()
             }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            z: -1
-            onClicked: if (ro.auth) field.forceActiveFocus()
         }
 
         Text {

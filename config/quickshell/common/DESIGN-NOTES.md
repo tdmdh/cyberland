@@ -1,5 +1,11 @@
 # Design-system research notes
 
+> **Status, 2026-09-18.** A research record of the codebase as it was when
+> written; the platform facts still hold. Since then the launcher stopped being
+> its own `launcher/` module and became a deck view (`deck/views/LauncherView.qml`),
+> `common/Wheel.qml` was deleted, and Theme's colour aliases were collapsed to one
+> name per colour. `Theme.qml`'s comments are the current reference.
+
 No existing `docs/` or notes convention was found under `~/.config/quickshell` or
 `~/.config/hypr` (checked with `find ... -iname "*.md"`, zero hits before this
 file). Written here per the fallback instruction.

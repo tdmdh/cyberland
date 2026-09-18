@@ -1,4 +1,5 @@
-// Notifications: the server, the popups, and the history panel.
+// Notifications: the server and the popups. The history is the deck's
+// Notifications view, which reads it over IPC (list / dismiss / invoke).
 //
 // Replaces swaync. Not because swaync was broken -- it worked -- but because
 // it was the last surface on this desktop drawn in someone else's design
@@ -17,7 +18,7 @@
 // removes it everywhere.
 //
 //   run:    qs -d -c notify
-//   toggle: qs -c notify ipc call notify toggle       (SUPER+SHIFT+N)
+//   toggle: qs -c notify ipc call notify toggle       (SUPER+SHIFT+N, opens the deck view)
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -29,7 +30,6 @@ ShellRoot {
     id: root
 
     // ---- state -----------------------------------------------------------
-    property bool isOpen: false
     property bool dnd: false
 
     // id -> { at, until }. `at` is ours because the spec carries no timestamp;
@@ -117,7 +117,7 @@ ShellRoot {
     Timer {
         interval: 500
         repeat: true
-        running: root.popups.length > 0 || root.isOpen
+        running: root.popups.length > 0
         onTriggered: root.tick = Date.now()
     }
 
@@ -186,7 +186,7 @@ ShellRoot {
     // system meters. Overlay layer: a notification is meant to cover a window.
     PanelWindow {
         id: pop
-        visible: root.popups.length > 0 && !root.isOpen
+        visible: root.popups.length > 0
 
         WlrLayershell.namespace: "quickshell:notify"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -335,224 +335,6 @@ ShellRoot {
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         onClicked: card.modelData.dismiss()
                         z: -1
-                    }
-                }
-            }
-        }
-    }
-
-    // ---- history ---------------------------------------------------------
-    // Migrated to unified modal deck host (quickshell/deck/views/NotifyView.qml).
-    // The NotificationServer and toast popups remain active here.
-    PanelWindow {
-        id: win
-        visible: false
-
-        WlrLayershell.namespace: "quickshell:notifypanel"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-        color: "transparent"
-        anchors { top: true; bottom: true; left: true; right: true }
-
-        onVisibleChanged: if (visible) keys.forceActiveFocus()
-
-        Item {
-            id: keys
-            anchors.fill: parent
-            focus: true
-            Keys.onEscapePressed: root.isOpen = false
-            Keys.onPressed: e => {
-                if (e.key === Qt.Key_D) { root.dnd = !root.dnd; e.accepted = true; }
-                if (e.key === Qt.Key_C) { root.clearAll(); e.accepted = true; }
-            }
-        }
-
-        Panel {
-            title: "NOTIFICATIONS"
-            jp: "通知"
-            hint: "D  DO NOT DISTURB       C  CLEAR ALL       ESC  CLOSE"
-            panelWidth: 800
-            placement: "right"
-            scrimMode: "dim"
-            onDismissed: root.isOpen = false
-
-            headerItems: [
-                DynamicPill {
-                    label: "HELD"
-                    jp: "件数"
-                    value: ("0" + root.all.length).slice(-2)
-                    subValue: root.dnd ? "DND ACTIVE" : (root.all.length > 0 ? "NOTIFICATIONS" : "ALL CLEAR")
-                    warn: root.dnd
-                    anchors.verticalCenter: parent.verticalCenter
-                },
-                Btn {
-                    text: "DND"
-                    jp: "静音"
-                    active: root.dnd
-                    tint: Theme.warn
-                    onClicked: root.dnd = !root.dnd
-                },
-                Btn {
-                    text: "CLEAR"
-                    jp: "消去"
-                    tint: Theme.alert
-                    enabled: root.all.length > 0
-                    onClicked: root.clearAll()
-                }
-            ]
-
-            Item {
-                width: parent.width
-                height: parent.height
-                // Grows with the list, then stops and scrolls. A fixed floor
-                // keeps the empty state from collapsing the panel to a slit.
-                implicitHeight: Math.max(140, Math.min(list.contentHeight, 560))
-
-                ListView {
-                    id: list
-                    anchors.fill: parent
-                    clip: true
-                    spacing: 1
-                    model: root.all
-                    boundsBehavior: Flickable.StopAtBounds
-
-                    delegate: Item {
-                        id: row
-                        required property var modelData
-                        width: list.width
-                        implicitHeight: rowBody.implicitHeight + 22
-                        height: implicitHeight
-
-                        readonly property bool crit:
-                            modelData.urgency === NotificationUrgency.Critical
-
-                        Rectangle {
-                            anchors.fill: parent
-                            color: hov.hovered ? Theme.layer1 : "transparent"
-                        }
-                        // The row separator, not a box: a list of boxes is a
-                        // list of things, a ruled list is one instrument.
-                        Rectangle {
-                            anchors { left: parent.left; right: parent.right
-                                      bottom: parent.bottom }
-                            height: 1
-                            color: Theme.line2
-                        }
-                        // Critical rows get a spine rather than a fill, so
-                        // colour still only ever means "wrong".
-                        Rectangle {
-                            anchors { left: parent.left; top: parent.top
-                                      bottom: parent.bottom; bottomMargin: 1 }
-                            width: 2
-                            visible: row.crit
-                            color: Theme.alert
-                        }
-
-                        Column {
-                            id: rowBody
-                            anchors { left: parent.left; right: parent.right
-                                      verticalCenter: parent.verticalCenter
-                                      leftMargin: 14; rightMargin: 14 }
-                            spacing: 4
-
-                            Item {
-                                width: parent.width
-                                height: rowTag.height
-                                Tag {
-                                    id: rowTag
-                                    label: (row.modelData.appName || "UNKNOWN").toUpperCase()
-                                    jp: row.crit ? "重要" : ""
-                                }
-                                Row {
-                                    anchors.right: parent.right
-                                    anchors.verticalCenter: rowTag.verticalCenter
-                                    spacing: 12
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: root.ago(row.modelData.id)
-                                        color: Theme.dim
-                                        font.family: Theme.fontMono
-                                        font.pixelSize: Theme.szMicro
-                                    }
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: "✕"
-                                        color: hov.hovered ? Theme.alert : Theme.dim
-                                        font.family: Theme.fontMono
-                                        font.pixelSize: Theme.szMicro
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            anchors.margins: -6
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: row.modelData.dismiss()
-                                        }
-                                    }
-                                }
-                            }
-
-                            Text {
-                                width: parent.width
-                                visible: text !== ""
-                                text: row.modelData.summary
-                                color: row.crit ? Theme.alert : Theme.text
-                                font.family: Theme.fontDisplay
-                                font.pixelSize: Theme.szBody + 2
-                                font.letterSpacing: Theme.trkTight
-                                elide: Text.ElideRight
-                                maximumLineCount: 1
-                            }
-                            Text {
-                                width: parent.width
-                                visible: text !== ""
-                                text: row.modelData.body
-                                color: Theme.dim
-                                font.family: Theme.fontDisplay
-                                font.pixelSize: Theme.szBody
-                                textFormat: Text.StyledText
-                                linkColor: Theme.accent
-                                wrapMode: Text.WordWrap
-                                elide: Text.ElideRight
-                                maximumLineCount: 2
-                            }
-                            Row {
-                                spacing: 8
-                                topPadding: 2
-                                visible: row.modelData.actions.length > 0
-                                Repeater {
-                                    model: row.modelData.actions
-                                    Btn {
-                                        required property var modelData
-                                        text: modelData.text.toUpperCase()
-                                        onClicked: modelData.invoke()
-                                    }
-                                }
-                            }
-                        }
-
-                        HoverHandler { id: hov }
-                    }
-                }
-
-                // The empty state says which of the two reasons it is empty
-                // for: nothing arrived, or nothing is being let through.
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 8
-                    visible: root.all.length === 0
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: root.dnd ? "DO NOT DISTURB" : "NOTHING HELD"
-                        color: root.dnd ? Theme.warn : Theme.dim
-                        font.family: Theme.fontDisplay
-                        font.pixelSize: Theme.szBody
-                        font.letterSpacing: Theme.trkWide
-                    }
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: root.dnd ? "静音" : "空"
-                        color: Theme.dim
-                        font.family: Theme.fontJP
-                        font.pixelSize: Theme.szMicro
                     }
                 }
             }

@@ -76,7 +76,7 @@ ShellRoot {
         openAnim.toY = root.targetY;
         openAnim.restart();
 
-        if (titleGlitch) titleGlitch.trigger();
+        chassis.glitch();
         root.restoreFocus();
         Qt.callLater(root.restoreFocus);
     }
@@ -95,7 +95,7 @@ ShellRoot {
         // Crossfade content smoothly
         crossfadeAnim.restart();
 
-        if (titleGlitch) titleGlitch.trigger();
+        chassis.glitch();
         root.restoreFocus();
         Qt.callLater(root.restoreFocus);
     }
@@ -177,8 +177,8 @@ ShellRoot {
     readonly property real targetScrim: root.activeView && root.activeView.scrim === false ? 0.0 : 0.60
 
     // panelHeight -1 = fit the view's implicitHeight, as Panel.qml's -1 does.
-    // chrome is everything around bodySlot: 22+28+12+1+14 above, 14+1+12+20+22 below.
-    readonly property int chrome: root.targetBare ? 0 : 146
+    // chrome: the height of everything around the body, from Chrome itself.
+    readonly property int chrome: chassis.chrome
     readonly property int targetH: {
         if (!root.activeView) return 560;
         if (targetFullBleed) return winH - 96;
@@ -259,167 +259,52 @@ ShellRoot {
             // =================================================================
             // ---- MORPHING GLASS CHASSIS -------------------------------------
             // =================================================================
-            Item {
+            Chrome {
                 id: chassis
-            x: root.targetX
-            y: root.targetY
-            width: root.targetW
-            height: root.targetH
+                x: root.targetX
+                y: root.targetY
+                width: root.targetW
+                height: root.targetH
+                title: root.activeView ? root.activeView.panelTitle : "DECK"
+                jp: root.activeView ? root.activeView.panelJp : "卓"
+                hint: root.activeView ? root.activeView.panelHint : "ESC  CLOSE"
+                bare: root.targetBare
+                dark: root.targetScrim === 0
+                onBackgroundClicked: root.restoreFocus()
 
-            // Physical Apple Spring Morph Behaviors
-            Behavior on x {
-                enabled: root.isOpen && !openAnim.running
-                NumberAnimation {
-                    duration: Theme.morphMs
-                    easing.type: Easing.OutCubic
-                }
-            }
-            Behavior on y {
-                enabled: root.isOpen && !openAnim.running
-                NumberAnimation {
-                    duration: Theme.morphMs
-                    easing.type: Easing.OutCubic
-                }
-            }
-            Behavior on width {
-                enabled: root.isOpen && !openAnim.running
-                NumberAnimation {
-                    duration: Theme.morphMs
-                    easing.type: Easing.OutCubic
-                }
-            }
-            Behavior on height {
-                enabled: root.isOpen && !openAnim.running
-                NumberAnimation {
-                    duration: Theme.morphMs
-                    easing.type: Easing.OutCubic
-                }
-            }
-
-            // Chassis Glass Body
-            Rectangle {
-                anchors.fill: parent
-                radius: 0
-                color: Theme.card
-                border.width: 1
-                border.color: Theme.edge
-
-                // Top specular laser light catch
-                Rectangle {
-                    anchors { top: parent.top; left: parent.left; right: parent.right }
-                    anchors.margins: 1
-                    height: 1
-                    radius: 0
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 0.15; color: Theme.accentWash }
-                        GradientStop { position: 0.50; color: Theme.accent }
-                        GradientStop { position: 0.85; color: Theme.accentWash }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
-                }
-
-                // Bottom subtle shadow rim
-                Rectangle {
-                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                    height: 1
-                    color: Theme.shadow
-                }
-
-                // Swallows clicks inside chassis and restores active focus
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: root.restoreFocus()
-                }
-            }
-
-            // Precision Corner Vernier Brackets
-            Bracket { corner: "tl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left; anchors.top: parent.top }
-            Bracket { corner: "tr"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.top: parent.top }
-            Bracket { corner: "bl"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.left: parent.left; anchors.bottom: parent.bottom }
-            Bracket { corner: "br"; arm: 14; thickness: 1; stroke: Theme.accentEdge; anchors.right: parent.right; anchors.bottom: parent.bottom }
-
-            // ---- Header --------------------------------------------------
-            Item {
-                id: header
-                anchors { top: parent.top; left: parent.left; right: parent.right; margins: 22 }
-                height: 28
-                visible: !root.targetBare
-
-                Row {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
-
-                    // Glowing Micro-Indicator Pip
-                    Rectangle {
-                        width: 6; height: 6; radius: 0
-                        color: Theme.accent
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        // Gated: ungated it ticked whenever the deck process
-                        // lived, open or not, and under a hidden header.
-                        SequentialAnimation on opacity {
-                            running: win.visible && header.visible
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 0.35; duration: 900; easing.type: Easing.InOutQuad }
-                            NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutQuad }
-                        }
-                    }
-
-                    // Morphing Cryptographic Glitch Title
-                    GlitchText {
-                        id: titleGlitch
-                        text: root.activeView ? root.activeView.panelTitle : "DECK"
-                        jp: root.activeView ? root.activeView.panelJp : "卓"
-                        color: Theme.text
-                        jpColor: Theme.accent
-                        pixelSize: Theme.szValue
-                        letterSpacing: Theme.trkWide
-                        weight: Font.DemiBold
-                    }
-                }
-
-                // Dynamic Header Component Loader
-                Loader {
+                headerItems: Loader {
                     id: headerSlot
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
                     sourceComponent: root.activeView ? root.activeView.headerComponent : null
                 }
-            }
 
-            // Top Division Rule
-            Item {
-                id: ruleTop
-                anchors { top: header.bottom; topMargin: 12; left: parent.left; right: parent.right; leftMargin: 22; rightMargin: 22 }
-                height: 1
-                visible: !root.targetBare
-
-                Rectangle { anchors.fill: parent; color: Theme.edge }
-                Rectangle {
-                    width: 30; height: 1
-                    color: Theme.accent
-                    anchors.centerIn: parent
-                    opacity: 0.7
+                Behavior on x {
+                    enabled: root.isOpen && !openAnim.running
+                    NumberAnimation {
+                        duration: Theme.morphMs
+                        easing.type: Easing.OutCubic
+                    }
                 }
-            }
-
-            // ---- Body Content Slot ---------------------------------------
-            Item {
-                id: bodySlot
-                anchors {
-                    top: root.targetBare ? parent.top : ruleTop.bottom
-                    bottom: root.targetBare ? parent.bottom : ruleBottom.top
-                    left: parent.left
-                    right: parent.right
-                    topMargin: root.targetBare ? 0 : 14
-                    bottomMargin: root.targetBare ? 0 : 14
-                    leftMargin: root.targetBare ? 0 : 22
-                    rightMargin: root.targetBare ? 0 : 22
+                Behavior on y {
+                    enabled: root.isOpen && !openAnim.running
+                    NumberAnimation {
+                        duration: Theme.morphMs
+                        easing.type: Easing.OutCubic
+                    }
                 }
-                clip: true
+                Behavior on width {
+                    enabled: root.isOpen && !openAnim.running
+                    NumberAnimation {
+                        duration: Theme.morphMs
+                        easing.type: Easing.OutCubic
+                    }
+                }
+                Behavior on height {
+                    enabled: root.isOpen && !openAnim.running
+                    NumberAnimation {
+                        duration: Theme.morphMs
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 // View Close Signal Interceptor
                 Connections {
@@ -718,51 +603,6 @@ ShellRoot {
                     }
                 }
             }
-
-            // Bottom Division Rule
-            Item {
-                id: ruleBottom
-                anchors { bottom: footer.top; bottomMargin: 12; left: parent.left; right: parent.right; leftMargin: 22; rightMargin: 22 }
-                height: 1
-                visible: !root.targetBare
-
-                Rectangle { anchors.fill: parent; color: Theme.edge }
-                Rectangle {
-                    width: 30; height: 1
-                    color: Theme.accentEdge
-                    anchors.centerIn: parent
-                    opacity: 0.5
-                }
-            }
-
-            // ---- Footer --------------------------------------------------
-            Item {
-                id: footer
-                anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: 22 }
-                height: 20
-                visible: !root.targetBare
-
-                Row {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Rectangle {
-                        width: 4; height: 4; radius: 0
-                        color: Theme.accent
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "READY // 待機  •  " + (root.activeView ? root.activeView.panelHint : "ESC CLOSE")
-                        color: Theme.dim
-                        font.family: Theme.fontDisplay
-                        font.pixelSize: Theme.szMicro
-                        font.letterSpacing: Theme.trkLabel
-                    }
-                }
-            }
-        }
         }
     }
 
@@ -772,7 +612,7 @@ ShellRoot {
         id: crossfadeAnim
 
         NumberAnimation {
-            target: bodySlot
+            target: chassis.bodyItem
             property: "opacity"
             from: 0.35
             to: 1.0

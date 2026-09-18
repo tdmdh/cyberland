@@ -69,7 +69,16 @@ Item {
                     for (const b of raw) {
                         if (!b.description || b.description === "") continue;
                         const m = view.mods(b.modmask);
-                        const k = view.keyName(b.key);
+                        let k = view.keyName(b.key);
+                        // hyprctl under the Lua config reports code:N binds (the
+                        // workspace number row) with no key and keycode 0. Use
+                        // the keycode if it ever arrives, else the workspace
+                        // number the description ends with; 10 is the 0 key.
+                        if (k === "") {
+                            const n = /workspace (\d+)$/.exec(b.description);
+                            k = b.keycode >= 10 && b.keycode <= 19 ? String((b.keycode - 9) % 10)
+                              : n ? String(Number(n[1]) % 10) : "?";
+                        }
                         const chord = (m.length > 0 ? m.join("+") + "+" : "") + k;
                         list.push({ chord: chord, desc: b.description.toUpperCase() });
                     }
